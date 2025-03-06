@@ -32,6 +32,9 @@ cp .env.example .env
 
 Set `TOURNEY_CREATOR` and `API_KEY` in `.env` as appropriate
 
+- `TOURNEY_CREATOR`: Find all future and current tourneys created by this user (doesn't have to be you)
+- `API_KEY`: The PAT you created above
+
 ## Run
 
 `python main.py`
