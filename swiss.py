@@ -13,10 +13,10 @@ from datetime import datetime, timedelta
 
 description = """This team offers classical (30+0) swiss tournaments every 4 hours.
 
-Discord: discord.gg/cNS3u7Gnbn
+Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 
-Main team: lichess.org/team/darkonteams
-Rapid team: lichess.org/team/darkonrapid"""
+Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
+Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
 
 
 def is_429(exception):
