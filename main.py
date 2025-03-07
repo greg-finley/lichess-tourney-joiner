@@ -9,6 +9,8 @@ from tenacity import (
     retry_if_exception
 )
 
+# flake8: noqa: E501
+
 # Setup basic logging with timestamp
 logging.basicConfig(
     format='%(asctime)s %(message)s',
