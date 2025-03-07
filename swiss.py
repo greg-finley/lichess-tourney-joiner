@@ -38,7 +38,7 @@ def create_tournament(start_time: str, api_key: str) -> None:
             "name": "DarkOnClassical",
             "clock.limit": 1800,  # 30 minutes in seconds
             "clock.increment": 0,
-            "nbRounds": 9,
+            "nbRounds": 6,
             "startsAt": start_time,  # ISO 8601 UTC datetime
             "description": description,
             "conditions": {
