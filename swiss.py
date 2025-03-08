@@ -8,15 +8,37 @@ from tenacity import (
 )
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+from typing import NamedTuple
 
 # flake8: noqa: E501
 
-description = """This team offers classical (30+0) swiss tournaments every 4 hours.
+
+class TournamentConfig(NamedTuple):
+    name: str
+    path_param: str
+    description: str
+    clock_limit: int
+    clock_increment: int
+    nb_rounds: int
+
+
+CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
 
 Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
+
+TOURNEY_CONFIGS: list[TournamentConfig] = [
+    TournamentConfig(
+        name="DarkOnClassical",
+        path_param="darkonclassical",
+        description=CLASSICAL_DESCRIPTION,
+        clock_limit=1800,
+        clock_increment=0,
+        nb_rounds=6,
+    )
+]
 
 
 def is_429(exception):
@@ -29,41 +51,36 @@ def is_429(exception):
     wait=wait_exponential(multiplier=1, min=1, max=1200),
     retry=retry_if_exception(is_429)
 )
-def create_tournament(start_time: str, api_key: str) -> None:
+def create_tournament(start_time: str, api_key: str, tournament_config: TournamentConfig) -> None:
     """Create a swiss tournament with automatic retries on 429 errors only."""
     response = requests.post(
-        "https://lichess.org/api/swiss/new/darkonclassical",
+        f"https://lichess.org/api/swiss/new/{tournament_config.path_param}",
         headers={"Authorization": f"Bearer {api_key}"},
         json={
-            "name": "DarkOnClassical",
-            "clock.limit": 1800,  # 30 minutes in seconds
-            "clock.increment": 0,
-            "nbRounds": 6,
+            "name": tournament_config.name,
+            "clock.limit": tournament_config.clock_limit,  # 30 minutes in seconds
+            "clock.increment": tournament_config.clock_increment,
+            "nbRounds": tournament_config.nb_rounds,
             "startsAt": start_time,  # ISO 8601 UTC datetime
-            "description": description,
+            "description": tournament_config.description,
             "conditions": {
                 "playYourGames": True
             }
         }
     )
     response.raise_for_status()
-    print(f"Created tournament starting at {start_time}")
+    print(f"Created {tournament_config.name} tournament starting at {start_time}")
 
-
-def main() -> None:
-    load_dotenv()
-    api_key = os.getenv("GREG_API_KEY")
-    assert api_key
-    dark_on_classical_swisses = requests.get(
-        "https://lichess.org/api/team/darkonclassical/swiss?max=20",
+def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
+    swisses = requests.get(
+        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=20",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
-
     created_count = 0
     first_start_time: str | None = None
 
-    for line in dark_on_classical_swisses.iter_lines():
+    for line in swisses.iter_lines():
         if line:
             swiss = json.loads(line)
             if swiss['status'] == 'created':
@@ -78,7 +95,7 @@ def main() -> None:
     start_dt = datetime.fromisoformat(first_start_time.replace('Z', '+00:00'))
     next_start = (start_dt + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    print(f"Found {created_count} upcoming tournaments")
+    print(f"Found {created_count} upcoming {tournament_config.name} tournaments")
     print(f"First tournament starts at: {first_start_time}")
     print(f"Next tournament should start at: {next_start}")
 
@@ -88,13 +105,21 @@ def main() -> None:
         # Start with next_start and keep adding 4 hours for each new tournament
         current_start = next_start
         for _ in range(tournaments_to_create):
-            create_tournament(current_start, api_key)
+            create_tournament(current_start, api_key, tournament_config)
             
             # Calculate next tournament start time
             current_dt = datetime.fromisoformat(current_start.replace('Z', '+00:00'))
             current_start = (current_dt + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M:%SZ')
     else:
-        print("Already have 20 tournaments, skipping creation")
+        print(f"Already have 20 {tournament_config.name} tournaments, skipping creation")
+
+
+def main() -> None:
+    load_dotenv()
+    api_key = os.getenv("GREG_API_KEY")
+    assert api_key
+    for tournament_config in TOURNEY_CONFIGS:
+        process_tourney_config(tournament_config, api_key)
 
 
 if __name__ == "__main__":
