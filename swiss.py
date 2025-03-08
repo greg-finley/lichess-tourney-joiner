@@ -96,7 +96,7 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
     # https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
     swisses = requests.get(
-        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=20",
+        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=200",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
