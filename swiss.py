@@ -20,6 +20,7 @@ class TournamentConfig(NamedTuple):
     clock_limit: int
     clock_increment: int
     nb_rounds: int
+    round_interval: int
 
 
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
@@ -29,14 +30,31 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
 
+RAPID_DESCRIPTION = """This team offers Rapid swiss tournaments every 4 hours.
+
+Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
+
+Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
+Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)"""
+
 TOURNEY_CONFIGS: list[TournamentConfig] = [
     TournamentConfig(
         name="DarkOnClassical",
         path_param="darkonclassical",
         description=CLASSICAL_DESCRIPTION,
-        clock_limit=1800,
+        clock_limit=1800, # 30 minutes
         clock_increment=0,
         nb_rounds=6,
+        round_interval=300, # 5 minutes
+    ),
+    TournamentConfig(
+        name="DarkOnRapid",
+        path_param="darkonrapid",
+        description=RAPID_DESCRIPTION,
+        clock_limit=600, # 10 minutes
+        clock_increment=0,
+        nb_rounds=9,
+        round_interval=60, # 1 minute
     )
 ]
 
@@ -52,7 +70,9 @@ def is_429(exception):
     retry=retry_if_exception(is_429)
 )
 def create_tournament(start_time: str, api_key: str, tournament_config: TournamentConfig) -> None:
-    """Create a swiss tournament with automatic retries on 429 errors only."""
+    """Create a swiss tournament with automatic retries on 429 errors only.
+    https://lichess.org/api#tag/Swiss-tournaments/operation/apiSwissNew
+    """
     response = requests.post(
         f"https://lichess.org/api/swiss/new/{tournament_config.path_param}",
         headers={"Authorization": f"Bearer {api_key}"},
@@ -65,13 +85,15 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
             "description": tournament_config.description,
             "conditions": {
                 "playYourGames": True
-            }
+            },
+            "roundInterval": tournament_config.round_interval
         }
     )
     response.raise_for_status()
     print(f"Created {tournament_config.name} tournament starting at {start_time}")
 
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
+    # https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
     swisses = requests.get(
         f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=20",
         headers={"Authorization": f"Bearer {api_key}"},
