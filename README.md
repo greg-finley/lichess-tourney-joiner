@@ -38,3 +38,7 @@ Set `TOURNEY_CREATOR` and `API_KEY` in `.env` as appropriate
 ## Run
 
 `python main.py`
+
+## Swiss tournament creator
+
+`swiss.py` is a quick utility used to create recurring tournaments.

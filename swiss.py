@@ -9,6 +9,7 @@ from tenacity import (
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from typing import NamedTuple
+import functions_framework
 
 # flake8: noqa: E501
 
@@ -136,13 +137,29 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
         print(f"Already have 20 {tournament_config.name} tournaments, skipping creation")
 
 
-def main() -> None:
+def get_api_key() -> str:
+    """Get API key from environment variables, supporting both local and Cloud Function environments"""
+    # Try to load from .env file (local development)
     load_dotenv()
-    api_key = os.getenv("GREG_API_KEY")
-    assert api_key
+    
+    api_key = os.getenv("TOURNEY_CREATOR_API_KEY")
+    if not api_key:
+        raise ValueError("No API key found in environment variables")
+    return api_key
+
+def main() -> None:
+    api_key = get_api_key()
     for tournament_config in TOURNEY_CONFIGS:
         process_tourney_config(tournament_config, api_key)
 
+@functions_framework.http
+def create_tournaments(request):
+    """Cloud Function entry point"""
+    try:
+        main()
+        return {"status": "success", "message": "Tournaments processed successfully"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}, 500
 
 if __name__ == "__main__":
     main()
