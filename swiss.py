@@ -106,7 +106,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     for line in swisses.iter_lines():
         if line:
             swiss = json.loads(line)
-            if swiss['status'] == 'created':
+            if swiss['status'] == 'created' and swiss['name'] == tournament_config.name:
                 created_count += 1
                 if first_start_time is None:
                     first_start_time = swiss['startsAt']
