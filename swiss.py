@@ -22,6 +22,7 @@ class TournamentConfig(NamedTuple):
     clock_increment: int
     nb_rounds: int
     round_interval: int
+    hours_between_tournaments: int
 
 
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
@@ -38,6 +39,16 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)"""
 
+MAIN_DESCRIPTION = """This team offers swiss tournaments EVERY HOUR!
+
+Next swiss: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
+Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
+
+Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)
+Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)
+
+Have fun!"""
+
 TOURNEY_CONFIGS: list[TournamentConfig] = [
     TournamentConfig(
         name="DarkOnClassical",
@@ -47,6 +58,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         clock_increment=0,
         nb_rounds=6,
         round_interval=300, # 5 minutes
+        hours_between_tournaments=4,
     ),
     TournamentConfig(
         name="DarkOnRapid",
@@ -56,6 +68,27 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         clock_increment=0,
         nb_rounds=9,
         round_interval=60, # 1 minute
+        hours_between_tournaments=4,
+    ),
+    TournamentConfig(
+        name="Hourly Rapid",
+        path_param="darkonteams",
+        description=MAIN_DESCRIPTION,
+        clock_limit=600, # 10 minutes
+        clock_increment=0,
+        nb_rounds=9,
+        round_interval=180, # 3 minutes
+        hours_between_tournaments=2,
+    ),
+    TournamentConfig(
+        name="Hourly Blitz",
+        path_param="darkonteams",
+        description=MAIN_DESCRIPTION,
+        clock_limit=180, # 3 minutes
+        clock_increment=0,
+        nb_rounds=11,
+        round_interval=120, # 2 minutes
+        hours_between_tournaments=2,
     )
 ]
 
@@ -106,7 +139,9 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     for line in swisses.iter_lines():
         if line:
             swiss = json.loads(line)
-            if swiss['status'] == 'created' and swiss['name'] == tournament_config.name:
+            if (swiss['status'] == 'created' and swiss['name'] == tournament_config.name and 
+                    # Ignore a bunch of junk far in the future
+                    ((not tournament_config.name.startswith('Hourly')) or swiss['startsAt'] <= '2025-03-10T03:15:00Z') or swiss['createdBy'] == 'gbfgbfgbf'):
                 created_count += 1
                 if first_start_time is None:
                     first_start_time = swiss['startsAt']
@@ -116,7 +151,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
 
     # Parse the ISO format string to datetime, add 4 hours, convert back to string
     start_dt = datetime.fromisoformat(first_start_time.replace('Z', '+00:00'))
-    next_start = (start_dt + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M:%SZ')
+    next_start = (start_dt + timedelta(hours=tournament_config.hours_between_tournaments)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
     print(f"Found {created_count} upcoming {tournament_config.name} tournaments")
     print(f"First tournament starts at: {first_start_time}")
@@ -132,7 +167,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
             
             # Calculate next tournament start time
             current_dt = datetime.fromisoformat(current_start.replace('Z', '+00:00'))
-            current_start = (current_dt + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M:%SZ')
+            current_start = (current_dt + timedelta(hours=tournament_config.hours_between_tournaments)).strftime('%Y-%m-%dT%H:%M:%SZ')
     else:
         print(f"Already have 20 {tournament_config.name} tournaments, skipping creation")
 
