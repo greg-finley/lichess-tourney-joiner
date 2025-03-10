@@ -8,10 +8,12 @@ from tenacity import (
 )
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 import functions_framework
 
 # flake8: noqa: E501
+
+NUM_TOURNEYS_TO_CREATE = 25
 
 
 class TournamentConfig(NamedTuple):
@@ -23,6 +25,7 @@ class TournamentConfig(NamedTuple):
     nb_rounds: int
     round_interval: int
     hours_between_tournaments: int
+    force_even_or_odd_hour: Literal['even', 'odd'] | None = None
 
 
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
@@ -79,6 +82,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         nb_rounds=9,
         round_interval=180, # 3 minutes
         hours_between_tournaments=2,
+        force_even_or_odd_hour='even',
     ),
     TournamentConfig(
         name="Hourly Blitz",
@@ -89,6 +93,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         nb_rounds=11,
         round_interval=120, # 2 minutes
         hours_between_tournaments=2,
+        force_even_or_odd_hour='odd',
     )
 ]
 
@@ -149,27 +154,27 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     if not first_start_time:
         raise ValueError("No created tournaments found")
 
-    # Parse the ISO format string to datetime, add 4 hours, convert back to string
-    start_dt = datetime.fromisoformat(first_start_time.replace('Z', '+00:00'))
-    next_start = (start_dt + timedelta(hours=tournament_config.hours_between_tournaments)).strftime('%Y-%m-%dT%H:%M:%SZ')
-
     print(f"Found {created_count} upcoming {tournament_config.name} tournaments")
     print(f"First tournament starts at: {first_start_time}")
-    print(f"Next tournament should start at: {next_start}")
 
-    # Create additional tournaments until we have 20
-    tournaments_to_create = 20 - created_count
+    next_start_str = first_start_time
+
+    # Create additional tournaments until we have NUM_TOURNEYS_TO_CREATE
+    tournaments_to_create = NUM_TOURNEYS_TO_CREATE - created_count
     if tournaments_to_create > 0:
-        # Start with next_start and keep adding 4 hours for each new tournament
-        current_start = next_start
+        current_dt = datetime.fromisoformat(next_start_str.replace('Z', '+00:00'))
+        next_start = (current_dt + timedelta(hours=tournament_config.hours_between_tournaments))
+        if tournament_config.force_even_or_odd_hour:
+            if tournament_config.force_even_or_odd_hour == 'even' and current_dt.hour % 2 == 1:
+                next_start = next_start + timedelta(hours=1)
+            elif tournament_config.force_even_or_odd_hour == 'odd' and current_dt.hour % 2 == 0:
+                next_start = next_start + timedelta(hours=1)
+        next_start_str = next_start.strftime('%Y-%m-%dT%H:%M:%SZ')
+
         for _ in range(tournaments_to_create):
-            create_tournament(current_start, api_key, tournament_config)
-            
-            # Calculate next tournament start time
-            current_dt = datetime.fromisoformat(current_start.replace('Z', '+00:00'))
-            current_start = (current_dt + timedelta(hours=tournament_config.hours_between_tournaments)).strftime('%Y-%m-%dT%H:%M:%SZ')
+            create_tournament(next_start_str, api_key, tournament_config)
     else:
-        print(f"Already have 20 {tournament_config.name} tournaments, skipping creation")
+        print(f"Already have {NUM_TOURNEYS_TO_CREATE} {tournament_config.name} tournaments, skipping creation")
 
 
 def get_api_key() -> str:
