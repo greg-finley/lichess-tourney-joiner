@@ -163,16 +163,17 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     tournaments_to_create = NUM_TOURNEYS_TO_CREATE - created_count
     if tournaments_to_create > 0:
         current_dt = datetime.fromisoformat(next_start_str.replace('Z', '+00:00'))
-        next_start = (current_dt + timedelta(hours=tournament_config.hours_between_tournaments))
-        if tournament_config.force_even_or_odd_hour:
-            if tournament_config.force_even_or_odd_hour == 'even' and current_dt.hour % 2 == 1:
-                next_start = next_start + timedelta(hours=1)
-            elif tournament_config.force_even_or_odd_hour == 'odd' and current_dt.hour % 2 == 0:
-                next_start = next_start + timedelta(hours=1)
-        next_start_str = next_start.strftime('%Y-%m-%dT%H:%M:%SZ')
-
+        
         for _ in range(tournaments_to_create):
+            next_start = (current_dt + timedelta(hours=tournament_config.hours_between_tournaments))
+            if tournament_config.force_even_or_odd_hour:
+                if tournament_config.force_even_or_odd_hour == 'even' and next_start.hour % 2 == 1:
+                    next_start = next_start + timedelta(hours=1)
+                elif tournament_config.force_even_or_odd_hour == 'odd' and next_start.hour % 2 == 0:
+                    next_start = next_start + timedelta(hours=1)
+            next_start_str = next_start.strftime('%Y-%m-%dT%H:%M:%SZ')
             create_tournament(next_start_str, api_key, tournament_config)
+            current_dt = next_start
     else:
         print(f"Already have {NUM_TOURNEYS_TO_CREATE} {tournament_config.name} tournaments, skipping creation")
 
