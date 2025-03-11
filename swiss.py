@@ -13,7 +13,8 @@ import functions_framework
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 25
+NUM_TOURNEYS_TO_CREATE = 10
+CREATE_IF_NOT_FOUND = False
 
 
 class TournamentConfig(NamedTuple):
@@ -100,8 +101,11 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
 
 def is_429(exception):
     """Check if the exception is a 429 Too Many Requests error"""
-    return (isinstance(exception, requests.exceptions.HTTPError) and 
-            exception.response.status_code == 429)
+    is_429_error = (isinstance(exception, requests.exceptions.HTTPError) and 
+                   exception.response.status_code == 429)
+    if is_429_error:
+        print("Hit rate limit (429). Retrying...")
+    return is_429_error
 
 
 @retry(
@@ -150,7 +154,11 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
                     first_start_time = swiss['startsAt']
 
     if not first_start_time:
-        raise ValueError("No created tournaments found")
+        if CREATE_IF_NOT_FOUND:
+            current = datetime.utcnow()
+            first_start_time = current.replace(minute=15, second=0, microsecond=0).strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            raise ValueError("No created tournaments found")
 
     print(f"Found {created_count} upcoming {tournament_config.name} tournaments")
     print(f"First tournament starts at: {first_start_time}")
