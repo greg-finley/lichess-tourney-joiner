@@ -9,7 +9,6 @@ from tenacity import (
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from typing import Literal, NamedTuple
-import functions_framework
 
 # flake8: noqa: E501
 
@@ -194,13 +193,12 @@ def get_api_key() -> str:
         raise ValueError("No API key found in environment variables")
     return api_key
 
-def main() -> None:
+def main(event, context) -> None:
     api_key = get_api_key()
     for tournament_config in TOURNEY_CONFIGS:
         process_tourney_config(tournament_config, api_key)
 
-@functions_framework.http
-def create_tournaments(request):
+def create_tournaments():
     """Cloud Function entry point"""
     try:
         main()
@@ -209,4 +207,4 @@ def create_tournaments(request):
         return {"status": "error", "message": str(e)}, 500
 
 if __name__ == "__main__":
-    main()
+    main(None, None)
