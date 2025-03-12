@@ -47,6 +47,7 @@ Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/dark
 MAIN_DESCRIPTION = """This team offers swiss tournaments EVERY HOUR!
 
 Next swiss: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
+
 Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)
