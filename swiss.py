@@ -148,7 +148,7 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
 )
 def update_tournament(tournament_id: str | None, next_tournament_id: str, api_key: str, tournament_config: TournamentConfig) -> None:
     """Update a tournament with automatic retries on 429 errors only.
-    https://lichess.org/api#tag/Swiss-tournaments/operation/swiss
+    https://lichess.org/api#tag/Swiss-tournaments/operation/apiSwissUpdate
     """
     if not tournament_config.replace_url or not tournament_id:
         print(f"No tournament ID ({tournament_id}) or replace URL ({tournament_config.replace_url}) for {tournament_config.name}, skipping update")
