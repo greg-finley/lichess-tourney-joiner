@@ -132,9 +132,7 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
             "nbRounds": tournament_config.nb_rounds,
             "startsAt": start_time,  # ISO 8601 UTC datetime
             "description": tournament_config.description,
-            "conditions": {
-                "playYourGames": True
-            },
+            "conditions.playYourGames": True,
             "roundInterval": tournament_config.round_interval
         }
     )
@@ -181,7 +179,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     """
 
     swisses = requests.get(
-        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=500",
+        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=10&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
@@ -192,12 +190,11 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     for line in swisses.iter_lines():
         if line:
             swiss = json.loads(line)
-            if (swiss['status'] == 'created' and swiss['name'] == tournament_config.name and swiss['createdBy'] == 'gbfgbfgbf'):
-                created_count += 1
-                if first_start_time is None:
-                    first_start_time = swiss['startsAt']
-                if last_tournament_id is None:
-                    last_tournament_id = swiss['id']
+            created_count += 1
+            if first_start_time is None:
+                first_start_time = swiss['startsAt']
+            if last_tournament_id is None:
+                last_tournament_id = swiss['id']
 
     if not first_start_time:
         if CREATE_IF_NOT_FOUND:
