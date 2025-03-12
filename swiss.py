@@ -135,7 +135,16 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
     print(f"Created {tournament_config.name} tournament starting at {start_time}")
 
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
-    # https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
+    """https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
+
+    {'id': 'T93RcMg2', 'createdBy': 'gbfgbfgbf', 'startsAt': '2025-03-12T11:00:00Z',
+    'name': 'DarkOnClassical', 'clock': {'limit': 1800, 'increment': 0},
+    'variant': 'standard', 'round': 0, 'nbRounds': 6, 'nbPlayers': 0, 'nbOngoing': 0,
+    'status': 'created', 'nextRound': {'at': '2025-03-12T11:00:00Z', 'in': 276869},
+    'verdicts': {'list': [{'condition': 'Play your games', 'verdict': 'ok'}], 'accepted': True},
+    'rated': True}
+    """
+
     swisses = requests.get(
         f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=500",
         headers={"Authorization": f"Bearer {api_key}"},
