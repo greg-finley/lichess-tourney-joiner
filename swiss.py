@@ -243,13 +243,5 @@ def main(event, context) -> None:
     for tournament_config in TOURNEY_CONFIGS:
         process_tourney_config(tournament_config, api_key)
 
-def create_tournaments():
-    """Cloud Function entry point"""
-    try:
-        main()
-        return {"status": "success", "message": "Tournaments processed successfully"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}, 500
-
 if __name__ == "__main__":
     main(None, None)
