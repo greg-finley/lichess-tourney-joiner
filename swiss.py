@@ -26,6 +26,8 @@ class TournamentConfig(NamedTuple):
     round_interval: int
     hours_between_tournaments: int
     force_even_or_odd_hour: Literal['even', 'odd'] | None = None
+    # Replace generic "next swiss" link with a link to the specific tournament when it's ready
+    replace_url: str | None = None
 
 
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
@@ -83,6 +85,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         round_interval=180, # 3 minutes
         hours_between_tournaments=2,
         force_even_or_odd_hour='even',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
     ),
     TournamentConfig(
         name="Hourly Blitz",
@@ -94,6 +97,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         round_interval=120, # 2 minutes
         hours_between_tournaments=2,
         force_even_or_odd_hour='odd',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
     )
 ]
 
@@ -111,9 +115,11 @@ def is_429(exception):
     wait=wait_exponential(multiplier=1, min=1, max=1200),
     retry=retry_if_exception(is_429)
 )
-def create_tournament(start_time: str, api_key: str, tournament_config: TournamentConfig) -> None:
+def create_tournament(start_time: str, api_key: str, tournament_config: TournamentConfig) -> str:
     """Create a swiss tournament with automatic retries on 429 errors only.
     https://lichess.org/api#tag/Swiss-tournaments/operation/apiSwissNew
+
+    Returns the tournament ID
     """
     response = requests.post(
         f"https://lichess.org/api/swiss/new/{tournament_config.path_param}",
@@ -132,7 +138,35 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
         }
     )
     response.raise_for_status()
-    print(f"Created {tournament_config.name} tournament starting at {start_time}")
+    tournament_id = response.json()['id']
+    print(f"Created {tournament_config.name} tournament starting at {start_time}: https://lichess.org/swiss/{tournament_id}")
+    return tournament_id
+
+@retry(
+    wait=wait_exponential(multiplier=1, min=1, max=1200),
+    retry=retry_if_exception(is_429)
+)
+def update_tournament(tournament_id: str | None, next_tournament_id: str, api_key: str, tournament_config: TournamentConfig) -> None:
+    """Update a tournament with automatic retries on 429 errors only.
+    https://lichess.org/api#tag/Swiss-tournaments/operation/swiss
+    """
+    if not tournament_config.replace_url or not tournament_id:
+        print(f"No tournament ID ({tournament_id}) or replace URL ({tournament_config.replace_url}) for {tournament_config.name}, skipping update")
+        return
+    response = requests.post(
+        f"https://lichess.org/api/swiss/{tournament_id}/edit",
+        headers={"Authorization": f"Bearer {api_key}"},
+        # Update description, plus set the required keys to their same values again
+        json={
+            "description": tournament_config.description.replace(tournament_config.replace_url, f"https://lichess.org/swiss/{next_tournament_id}"),
+            "clock.limit": tournament_config.clock_limit,
+            "clock.increment": tournament_config.clock_increment,
+            "nbRounds": tournament_config.nb_rounds,
+        }
+    )
+    response.raise_for_status()
+    print(f"Updated {tournament_config.name} tournament description: https://lichess.org/swiss/{tournament_id}")
+
 
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
     """https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
@@ -152,6 +186,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     )
     created_count = 0
     first_start_time: str | None = None
+    last_tournament_id: str | None = None
 
     for line in swisses.iter_lines():
         if line:
@@ -160,6 +195,8 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
                 created_count += 1
                 if first_start_time is None:
                     first_start_time = swiss['startsAt']
+                if last_tournament_id is None:
+                    last_tournament_id = swiss['id']
 
     if not first_start_time:
         if CREATE_IF_NOT_FOUND:
@@ -186,8 +223,10 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
                 elif tournament_config.force_even_or_odd_hour == 'odd' and next_start.hour % 2 == 0:
                     next_start = next_start + timedelta(hours=1)
             next_start_str = next_start.strftime('%Y-%m-%dT%H:%M:%SZ')
-            create_tournament(next_start_str, api_key, tournament_config)
+            next_tournament_id = create_tournament(next_start_str, api_key, tournament_config)
+            update_tournament(last_tournament_id, next_tournament_id, api_key, tournament_config)
             current_dt = next_start
+            last_tournament_id = next_tournament_id
     else:
         print(f"Already have {NUM_TOURNEYS_TO_CREATE} {tournament_config.name} tournaments, skipping creation")
 
