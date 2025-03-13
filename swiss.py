@@ -161,7 +161,6 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
             "clock.limit": tournament_config.clock_limit,
             "clock.increment": tournament_config.clock_increment,
             "nbRounds": tournament_config.nb_rounds,
-            "startsAt": start_time,
             "conditions.playYourGames": True,
             "roundInterval": tournament_config.round_interval
         }
