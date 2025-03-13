@@ -126,10 +126,10 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
         headers={"Authorization": f"Bearer {api_key}"},
         json={
             "name": tournament_config.name,
-            "clock.limit": tournament_config.clock_limit,  # 30 minutes in seconds
+            "clock.limit": tournament_config.clock_limit,
             "clock.increment": tournament_config.clock_increment,
             "nbRounds": tournament_config.nb_rounds,
-            "startsAt": start_time,  # ISO 8601 UTC datetime
+            "startsAt": start_time,
             "description": tournament_config.description,
             "conditions.playYourGames": True,
             "roundInterval": tournament_config.round_interval
@@ -154,12 +154,16 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
     response = requests.post(
         f"https://lichess.org/api/swiss/{tournament_id}/edit",
         headers={"Authorization": f"Bearer {api_key}"},
-        # Update description, plus set the required keys to their same values again
+        # Update description and set everything back again
         json={
             "description": tournament_config.description.replace(tournament_config.replace_url, f"https://lichess.org/swiss/{next_tournament_id}"),
+            "name": tournament_config.name,
             "clock.limit": tournament_config.clock_limit,
             "clock.increment": tournament_config.clock_increment,
             "nbRounds": tournament_config.nb_rounds,
+            "startsAt": start_time,
+            "conditions.playYourGames": True,
+            "roundInterval": tournament_config.round_interval
         }
     )
     response.raise_for_status()
