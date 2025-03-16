@@ -33,6 +33,7 @@ class TournamentConfig(NamedTuple):
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
 
 Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
+Next swiss: [https://lichess.org/team/darkonclassical/tournaments](https://lichess.org/team/darkonclassical/tournaments)
 
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
@@ -40,6 +41,7 @@ Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)
 RAPID_DESCRIPTION = """This team offers Rapid swiss tournaments every 4 hours.
 
 Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
+Next swiss: [https://lichess.org/team/darkonrapid/tournaments](https://lichess.org/team/darkonrapid/tournaments)
 
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)"""
@@ -64,6 +66,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         nb_rounds=6,
         round_interval=300, # 5 minutes
         hours_between_tournaments=4,
+        replace_url='https://lichess.org/team/darkonclassical/tournaments',
     ),
     TournamentConfig(
         name="DarkOnRapid",
@@ -74,6 +77,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         nb_rounds=9,
         round_interval=60, # 1 minute
         hours_between_tournaments=4,
+        replace_url='https://lichess.org/team/darkonrapid/tournaments',
     ),
     TournamentConfig(
         name="Hourly Rapid",
