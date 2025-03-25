@@ -8,7 +8,8 @@ from tenacity import (
 )
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from typing import Literal, NamedTuple
+from typing import Literal
+from dataclasses import dataclass
 
 # flake8: noqa: E501
 
@@ -16,18 +17,25 @@ NUM_TOURNEYS_TO_CREATE = 10
 CREATE_IF_NOT_FOUND = False
 
 
-class TournamentConfig(NamedTuple):
+@dataclass
+class TournamentConfig:
     name: str
     path_param: str
     description: str
     clock_limit: int
     clock_increment: int
-    nb_rounds: int
-    round_interval: int
     hours_between_tournaments: int
     force_even_or_odd_hour: Literal['even', 'odd'] | None = None
-    # Replace generic "next swiss" link with a link to the specific tournament when it's ready
     replace_url: str | None = None
+
+@dataclass
+class ArenaConfig(TournamentConfig):
+    minutes: int = 90
+
+@dataclass
+class SwissConfig(TournamentConfig):
+    nb_rounds: int = 9
+    round_interval: int = 60
 
 
 CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
@@ -56,8 +64,14 @@ Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/dark
 
 Have fun!"""
 
+ARENA_DESCRIPTION = """We host hourly Ultrabullet tournaments! (every 2 hours)
+
+Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
+
+Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
+
 TOURNEY_CONFIGS: list[TournamentConfig] = [
-    TournamentConfig(
+    SwissConfig(
         name="DarkOnClassical",
         path_param="darkonclassical",
         description=CLASSICAL_DESCRIPTION,
@@ -68,7 +82,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         hours_between_tournaments=4,
         replace_url='https://lichess.org/team/darkonclassical/tournaments',
     ),
-    TournamentConfig(
+    SwissConfig(
         name="DarkOnRapid",
         path_param="darkonrapid",
         description=RAPID_DESCRIPTION,
@@ -79,7 +93,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         hours_between_tournaments=4,
         replace_url='https://lichess.org/team/darkonrapid/tournaments',
     ),
-    TournamentConfig(
+    SwissConfig(
         name="Hourly Rapid",
         path_param="darkonteams",
         description=MAIN_DESCRIPTION,
@@ -91,7 +105,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         force_even_or_odd_hour='even',
         replace_url='https://lichess.org/team/darkonteams/tournaments',
     ),
-    TournamentConfig(
+    SwissConfig(
         name="Hourly Blitz",
         path_param="darkonteams",
         description=MAIN_DESCRIPTION,
@@ -102,6 +116,17 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         hours_between_tournaments=2,
         force_even_or_odd_hour='odd',
         replace_url='https://lichess.org/team/darkonteams/tournaments',
+    ),
+    ArenaConfig(
+        name="Hourly Ultrabullet",
+        path_param="darkonteams",
+        description=ARENA_DESCRIPTION,
+        clock_limit=15, 
+        clock_increment=0,
+        hours_between_tournaments=2,
+        force_even_or_odd_hour='even',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
+        minutes=90,
     )
 ]
 
@@ -120,14 +145,15 @@ def is_429(exception):
     retry=retry_if_exception(is_429)
 )
 def create_tournament(start_time: str, api_key: str, tournament_config: TournamentConfig) -> str:
-    """Create a swiss tournament with automatic retries on 429 errors only.
+    """Create a tournament with automatic retries on 429 errors only.
     https://lichess.org/api#tag/Swiss-tournaments/operation/apiSwissNew
 
     Returns the tournament ID
     """
-    response = requests.post(
-        f"https://lichess.org/api/swiss/new/{tournament_config.path_param}",
-        headers={"Authorization": f"Bearer {api_key}"},
+    if isinstance(tournament_config, SwissConfig):
+        response = requests.post(
+            f"https://lichess.org/api/swiss/new/{tournament_config.path_param}",
+            headers={"Authorization": f"Bearer {api_key}"},
         json={
             "name": tournament_config.name,
             "clock.limit": tournament_config.clock_limit,
@@ -139,6 +165,22 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
             "roundInterval": tournament_config.round_interval
         }
     )
+    elif isinstance(tournament_config, ArenaConfig):
+        response = requests.post(
+            "https://lichess.org/api/tournament",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "name": tournament_config.name,
+                "clock.limit": tournament_config.clock_limit,
+                "clock.increment": tournament_config.clock_increment,
+                "conditions.teamMember.teamId": tournament_config.path_param,
+                "startsAt": start_time,
+                "description": tournament_config.description,
+                "minutes": tournament_config.minutes,
+            }
+        )
+    else:
+        raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
     response.raise_for_status()
     tournament_id = response.json()['id']
     print(f"Created {tournament_config.name} tournament starting at {start_time}: https://lichess.org/swiss/{tournament_id}")
@@ -155,7 +197,8 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
     if not tournament_config.replace_url or not tournament_id:
         print(f"No tournament ID ({tournament_id}) or replace URL ({tournament_config.replace_url}) for {tournament_config.name}, skipping update")
         return
-    response = requests.post(
+    if isinstance(tournament_config, SwissConfig):
+        response = requests.post(
         f"https://lichess.org/api/swiss/{tournament_id}/edit",
         headers={"Authorization": f"Bearer {api_key}"},
         # Update description and set everything back again
@@ -165,10 +208,25 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
             "clock.limit": tournament_config.clock_limit,
             "clock.increment": tournament_config.clock_increment,
             "nbRounds": tournament_config.nb_rounds,
-            "conditions.playYourGames": True,
-            "roundInterval": tournament_config.round_interval
-        }
-    )
+                "conditions.playYourGames": True,
+                "roundInterval": tournament_config.round_interval
+            }
+        )
+    elif isinstance(tournament_config, ArenaConfig):
+        response = requests.post(
+            f"https://lichess.org/api/tournament/{tournament_id}",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={
+                "name": tournament_config.name,
+                "clock.limit": tournament_config.clock_limit,
+                "clock.increment": tournament_config.clock_increment,
+                "conditions.teamMember.teamId": tournament_config.path_param,
+                "description": tournament_config.description.replace(tournament_config.replace_url, f"https://lichess.org/tournament/{next_tournament_id}"),
+                "minutes": tournament_config.minutes,
+            }
+        )
+    else:
+        raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
     response.raise_for_status()
     print(f"Updated {tournament_config.name} tournament description: https://lichess.org/swiss/{tournament_id}")
 
@@ -184,8 +242,18 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     'rated': True}
     """
 
-    swisses = requests.get(
-        f"https://lichess.org/api/team/{tournament_config.path_param}/swiss?max=10&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
+    # Pending https://github.com/lichess-org/lila/issues/17236
+    if isinstance(tournament_config, ArenaConfig):
+        num = 200
+        param = 'arena'
+    elif isinstance(tournament_config, SwissConfig):
+        num = 10
+        param = 'swiss'
+    else:
+        raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
+    
+    tourneys = requests.get(
+        f"https://lichess.org/api/team/{tournament_config.path_param}/{param}?max={num}&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
@@ -193,14 +261,16 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     first_start_time: str | None = None
     last_tournament_id: str | None = None
 
-    for line in swisses.iter_lines():
+    for line in tourneys.iter_lines():
         if line:
-            swiss = json.loads(line)
+            tourney = json.loads(line)
+            if tourney['name'] != tournament_config.name or tourney['status'] != 'created' or tourney['createdBy'] != 'gbfgbfgbf':
+                continue
             created_count += 1
             if first_start_time is None:
-                first_start_time = swiss['startsAt']
+                first_start_time = tourney['startsAt']
             if last_tournament_id is None:
-                last_tournament_id = swiss['id']
+                last_tournament_id = tourney['id']
 
     if not first_start_time:
         if CREATE_IF_NOT_FOUND:
