@@ -8,14 +8,14 @@ from tenacity import (
     retry_if_exception
 )
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from dataclasses import dataclass
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 1
-CREATE_IF_NOT_FOUND = True
+NUM_TOURNEYS_TO_CREATE = 2
+CREATE_IF_NOT_FOUND = False
 
 
 @dataclass
@@ -23,7 +23,7 @@ class TournamentConfig:
     name: str
     path_param: str
     description: str
-    clock_limit: int
+    clock_limit: float
     clock_increment: int
     hours_between_tournaments: int
     force_even_or_odd_hour: Literal['even', 'odd'] | None = None
@@ -76,7 +76,7 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         name="Hourly Ultrabullet",
         path_param="darkonteams",
         description=ARENA_DESCRIPTION,
-        clock_limit=15, 
+        clock_limit=0.25, 
         clock_increment=0,
         hours_between_tournaments=2,
         force_even_or_odd_hour='even',
@@ -219,11 +219,15 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     for line in tourneys.iter_lines():
         if line:
             tourney = json.loads(line)
-            if tourney.get('name', tourney['fullName']) != tournament_config.name or tourney['status'] != 'created' or tourney['createdBy'] != 'gbfgbfgbf':
+            # Can be removed once lichess allows query params
+            if isinstance(tournament_config, ArenaConfig) and (tourney['fullName'] != tournament_config.name + ' Arena' or tourney['status'] != 10 or tourney['createdBy'] != 'gbfgbfgbf'):
                 continue
             created_count += 1
             if first_start_time is None:
-                first_start_time = tourney['startsAt']
+                if isinstance(tournament_config, ArenaConfig):
+                    first_start_time = datetime.fromtimestamp(tourney['startsAt']/1000, tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+                else:
+                    first_start_time = tourney['startsAt']
             if last_tournament_id is None:
                 last_tournament_id = tourney['id']
 
