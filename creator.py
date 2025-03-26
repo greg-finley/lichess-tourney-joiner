@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 2
+NUM_TOURNEYS_TO_CREATE = 10
 CREATE_IF_NOT_FOUND = False
 
 
@@ -72,6 +72,52 @@ Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.
 Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
 
 TOURNEY_CONFIGS: list[TournamentConfig] = [
+    SwissConfig(
+        name="DarkOnClassical",
+        path_param="darkonclassical",
+        description=CLASSICAL_DESCRIPTION,
+        clock_limit=1800, # 30 minutes
+        clock_increment=0,
+        nb_rounds=6,
+        round_interval=300, # 5 minutes
+        hours_between_tournaments=4,
+        replace_url='https://lichess.org/team/darkonclassical/tournaments',
+    ),
+    SwissConfig(
+        name="DarkOnRapid",
+        path_param="darkonrapid",
+        description=RAPID_DESCRIPTION,
+        clock_limit=600, # 10 minutes
+        clock_increment=0,
+        nb_rounds=9,
+        round_interval=60, # 1 minute
+        hours_between_tournaments=4,
+        replace_url='https://lichess.org/team/darkonrapid/tournaments',
+    ),
+    SwissConfig(
+        name="Hourly Rapid",
+        path_param="darkonteams",
+        description=MAIN_DESCRIPTION,
+        clock_limit=600, # 10 minutes
+        clock_increment=0,
+        nb_rounds=9,
+        round_interval=180, # 3 minutes
+        hours_between_tournaments=2,
+        force_even_or_odd_hour='even',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
+    ),
+    SwissConfig(
+        name="Hourly Blitz",
+        path_param="darkonteams",
+        description=MAIN_DESCRIPTION,
+        clock_limit=180, # 3 minutes
+        clock_increment=0,
+        nb_rounds=11,
+        round_interval=120, # 2 minutes
+        hours_between_tournaments=2,
+        force_even_or_odd_hour='odd',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
+    ),
     ArenaConfig(
         name="Hourly Ultrabullet",
         path_param="darkonteams",
