@@ -39,6 +39,6 @@ Set `TOURNEY_CREATOR` and `API_KEY` in `.env` as appropriate
 
 `python main.py`
 
-## Swiss tournament creator
+## Tournament creator
 
-`swiss.py` is a quick utility used to create recurring tournaments.
+`creator.py` is a quick utility used to create recurring tournaments. It's very specific to DarkOnTeams but it could be a good reference maybe.
