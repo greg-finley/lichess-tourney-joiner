@@ -235,12 +235,68 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
     """https://lichess.org/api#tag/Swiss-tournaments/operation/apiTeamSwiss
 
-    {'id': 'T93RcMg2', 'createdBy': 'gbfgbfgbf', 'startsAt': '2025-03-12T11:00:00Z',
-    'name': 'DarkOnClassical', 'clock': {'limit': 1800, 'increment': 0},
-    'variant': 'standard', 'round': 0, 'nbRounds': 6, 'nbPlayers': 0, 'nbOngoing': 0,
-    'status': 'created', 'nextRound': {'at': '2025-03-12T11:00:00Z', 'in': 276869},
-    'verdicts': {'list': [{'condition': 'Play your games', 'verdict': 'ok'}], 'accepted': True},
-    'rated': True}
+Swiss:
+{
+  'id': 'T93RcMg2',
+  'createdBy': 'gbfgbfgbf',
+  'startsAt': '2025-03-12T11:00:00Z',
+  'name': 'DarkOnClassical',
+  'clock': {
+    'limit': 1800,
+    'increment': 0
+  },
+  'variant': 'standard',
+  'round': 0,
+  'nbRounds': 6,
+  'nbPlayers': 0,
+  'nbOngoing': 0,
+  'status': 'created',
+  'nextRound': {
+    'at': '2025-03-12T11:00:00Z',
+    'in': 276869
+  },
+  'verdicts': {
+    'list': [
+      {
+        'condition': 'Play your games',
+        'verdict': 'ok'
+      }
+    ],
+    'accepted': True
+  },
+  'rated': True
+}
+
+Arena:
+{
+  'id': 'smwurWQO',
+  'createdBy': 'gbfgbfgbf',
+  'system': 'arena',
+  'minutes': 90,
+  'clock': {
+    'limit': 900,
+    'increment': 0
+  },
+  'rated': True,
+  'fullName': 'Hourly Ultrabullet Arena',
+  'nbPlayers': 0,
+  'variant': {
+    'key': 'standard',
+    'short': 'Std',
+    'name': 'Standard'
+  },
+  'startsAt': 1742969700000,
+  'finishesAt': 1742975100000,
+  'status': 10,
+  'perf': {
+    'key': 'rapid',
+    'name': 'Rapid',
+    'position': 2,
+    'icon': '#'
+  },
+  'secondsToStart': 7947,
+  'teamMember': 'darkonteams'
+}
     """
 
     # Pending https://github.com/lichess-org/lila/issues/17236
