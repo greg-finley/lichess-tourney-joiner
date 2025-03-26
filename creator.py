@@ -1,3 +1,4 @@
+import calendar
 import json
 import os
 import requests
@@ -13,8 +14,8 @@ from dataclasses import dataclass
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 10
-CREATE_IF_NOT_FOUND = False
+NUM_TOURNEYS_TO_CREATE = 1
+CREATE_IF_NOT_FOUND = True
 
 
 @dataclass
@@ -71,52 +72,6 @@ Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.
 Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
 
 TOURNEY_CONFIGS: list[TournamentConfig] = [
-    SwissConfig(
-        name="DarkOnClassical",
-        path_param="darkonclassical",
-        description=CLASSICAL_DESCRIPTION,
-        clock_limit=1800, # 30 minutes
-        clock_increment=0,
-        nb_rounds=6,
-        round_interval=300, # 5 minutes
-        hours_between_tournaments=4,
-        replace_url='https://lichess.org/team/darkonclassical/tournaments',
-    ),
-    SwissConfig(
-        name="DarkOnRapid",
-        path_param="darkonrapid",
-        description=RAPID_DESCRIPTION,
-        clock_limit=600, # 10 minutes
-        clock_increment=0,
-        nb_rounds=9,
-        round_interval=60, # 1 minute
-        hours_between_tournaments=4,
-        replace_url='https://lichess.org/team/darkonrapid/tournaments',
-    ),
-    SwissConfig(
-        name="Hourly Rapid",
-        path_param="darkonteams",
-        description=MAIN_DESCRIPTION,
-        clock_limit=600, # 10 minutes
-        clock_increment=0,
-        nb_rounds=9,
-        round_interval=180, # 3 minutes
-        hours_between_tournaments=2,
-        force_even_or_odd_hour='even',
-        replace_url='https://lichess.org/team/darkonteams/tournaments',
-    ),
-    SwissConfig(
-        name="Hourly Blitz",
-        path_param="darkonteams",
-        description=MAIN_DESCRIPTION,
-        clock_limit=180, # 3 minutes
-        clock_increment=0,
-        nb_rounds=11,
-        round_interval=120, # 2 minutes
-        hours_between_tournaments=2,
-        force_even_or_odd_hour='odd',
-        replace_url='https://lichess.org/team/darkonteams/tournaments',
-    ),
     ArenaConfig(
         name="Hourly Ultrabullet",
         path_param="darkonteams",
@@ -171,10 +126,10 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "name": tournament_config.name,
-                "clock.limit": tournament_config.clock_limit,
-                "clock.increment": tournament_config.clock_increment,
+                "clockTime": tournament_config.clock_limit,
+                "clockIncrement": tournament_config.clock_increment,
                 "conditions.teamMember.teamId": tournament_config.path_param,
-                "startsAt": start_time,
+                "startDate": int(calendar.timegm(datetime.fromisoformat(start_time.replace('Z', '+00:00')).timetuple()) * 1000),
                 "description": tournament_config.description,
                 "minutes": tournament_config.minutes,
             }
@@ -218,8 +173,8 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
             headers={"Authorization": f"Bearer {api_key}"},
             json={
                 "name": tournament_config.name,
-                "clock.limit": tournament_config.clock_limit,
-                "clock.increment": tournament_config.clock_increment,
+                "clockTime": tournament_config.clock_limit,
+                "clockIncrement": tournament_config.clock_increment,
                 "conditions.teamMember.teamId": tournament_config.path_param,
                 "description": tournament_config.description.replace(tournament_config.replace_url, f"https://lichess.org/tournament/{next_tournament_id}"),
                 "minutes": tournament_config.minutes,
@@ -264,7 +219,7 @@ def process_tourney_config(tournament_config: TournamentConfig, api_key: str) ->
     for line in tourneys.iter_lines():
         if line:
             tourney = json.loads(line)
-            if tourney['name'] != tournament_config.name or tourney['status'] != 'created' or tourney['createdBy'] != 'gbfgbfgbf':
+            if tourney.get('name', tourney['fullName']) != tournament_config.name or tourney['status'] != 'created' or tourney['createdBy'] != 'gbfgbfgbf':
                 continue
             created_count += 1
             if first_start_time is None:
