@@ -138,7 +138,7 @@ def create_tournament(start_time: str, api_key: str, tournament_config: Tourname
         raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
     response.raise_for_status()
     tournament_id = response.json()['id']
-    print(f"Created {tournament_config.name} tournament starting at {start_time}: https://lichess.org/swiss/{tournament_id}")
+    print(f"Created {tournament_config.name} tournament starting at {start_time}: https://lichess.org/{isinstance(tournament_config, ArenaConfig) and 'tournament' or 'swiss'}/{tournament_id}")
     return tournament_id
 
 @retry(
@@ -183,7 +183,7 @@ def update_tournament(tournament_id: str | None, next_tournament_id: str, api_ke
     else:
         raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
     response.raise_for_status()
-    print(f"Updated {tournament_config.name} tournament description: https://lichess.org/swiss/{tournament_id}")
+    print(f"Updated {tournament_config.name} tournament description: https://lichess.org/{isinstance(tournament_config, ArenaConfig) and 'tournament' or 'swiss'}/{tournament_id}")
 
 
 def process_tourney_config(tournament_config: TournamentConfig, api_key: str) -> None:
