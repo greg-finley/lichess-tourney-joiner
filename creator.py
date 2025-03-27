@@ -299,18 +299,9 @@ Arena:
 }
     """
 
-    # Pending https://github.com/lichess-org/lila/issues/17236
-    if isinstance(tournament_config, ArenaConfig):
-        num = 200
-        param = 'arena'
-    elif isinstance(tournament_config, SwissConfig):
-        num = 10
-        param = 'swiss'
-    else:
-        raise ValueError(f"Unknown tournament config type: {type(tournament_config)}")
     
     tourneys = requests.get(
-        f"https://lichess.org/api/team/{tournament_config.path_param}/{param}?max={num}&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
+        f"https://lichess.org/api/team/{tournament_config.path_param}/{isinstance(tournament_config, ArenaConfig) and 'arena' or 'swiss'}?max=10&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
@@ -321,9 +312,6 @@ Arena:
     for line in tourneys.iter_lines():
         if line:
             tourney = json.loads(line)
-            # Can be removed once lichess allows query params
-            if isinstance(tournament_config, ArenaConfig) and (tourney['fullName'] != tournament_config.name + ' Arena' or tourney['status'] != 10 or tourney['createdBy'] != 'gbfgbfgbf'):
-                continue
             created_count += 1
             if first_start_time is None:
                 if isinstance(tournament_config, ArenaConfig):
