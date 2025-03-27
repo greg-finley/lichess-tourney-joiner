@@ -301,7 +301,7 @@ Arena:
 
     
     tourneys = requests.get(
-        f"https://lichess.org/api/team/{tournament_config.path_param}/{isinstance(tournament_config, ArenaConfig) and 'arena' or 'swiss'}?max=10&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
+        f"https://lichess.org/api/team/{tournament_config.path_param}/{'arena' if isinstance(tournament_config, ArenaConfig) else 'swiss'}?max=10&status=created&createdBy=gbfgbfgbf&name={tournament_config.name.replace(' ', '%20')}",
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
