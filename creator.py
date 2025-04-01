@@ -38,8 +38,14 @@ class SwissConfig(TournamentConfig):
     nb_rounds: int = 9
     round_interval: int = 60
 
+PROMO = """5€ MONEY PRIZE SWISS: (Open for all) (20.04.2025) [https://lichess.org/swiss/foSQa3IW](https://lichess.org/swiss/foSQa3IW)
 
-CLASSICAL_DESCRIPTION = """This team offers classical (30+0) swiss tournaments every 4 hours.
+10€ MONEY PRIZE ARENA: (Only for discord members) (04.05.2025) [https://lichess.org/tournament/fm41tzRh](https://lichess.org/tournament/fm41tzRh)
+
+"""
+
+
+CLASSICAL_DESCRIPTION = PROMO + """This team offers classical (30+0) swiss tournaments every 4 hours.
 
 Next swiss: [https://lichess.org/team/darkonclassical/tournaments](https://lichess.org/team/darkonclassical/tournaments)
 
@@ -47,7 +53,7 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
 
-RAPID_DESCRIPTION = """This team offers Rapid swiss tournaments every 4 hours.
+RAPID_DESCRIPTION = PROMO + """This team offers Rapid swiss tournaments every 4 hours.
 
 Next swiss: [https://lichess.org/team/darkonrapid/tournaments](https://lichess.org/team/darkonrapid/tournaments)
 
@@ -55,7 +61,7 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)"""
 
-MAIN_DESCRIPTION = """This team offers swiss tournaments EVERY HOUR!
+MAIN_DESCRIPTION = PROMO + """This team offers swiss tournaments EVERY HOUR!
 
 Next swiss: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
 
@@ -65,7 +71,7 @@ Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/dark
 
 Have fun!"""
 
-ARENA_DESCRIPTION = """We host hourly Ultrabullet tournaments! (every 2 hours)
+ARENA_DESCRIPTION = PROMO + """We host hourly Ultrabullet tournaments! (every 2 hours)
 
 Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
 
