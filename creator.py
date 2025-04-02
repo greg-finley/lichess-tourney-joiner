@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 3
+NUM_TOURNEYS_TO_CREATE = 5
 CREATE_IF_NOT_FOUND = False
 
 
