@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 # flake8: noqa: E501
 
-NUM_TOURNEYS_TO_CREATE = 10
+NUM_TOURNEYS_TO_CREATE = 3
 CREATE_IF_NOT_FOUND = False
 
 
@@ -77,6 +77,13 @@ Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.
 
 Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
 
+BLITZ_SHIELD_DESCRIPTION = """Next Shield: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments) 
+
+Welcome to the weekly blitz shield swiss!
+The winner of this swiss keeps the shield until next week, where he/she has to defend it.
+
+Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
+
 TOURNEY_CONFIGS: list[TournamentConfig] = [
     SwissConfig(
         name="DarkOnClassical",
@@ -122,6 +129,17 @@ TOURNEY_CONFIGS: list[TournamentConfig] = [
         round_interval=120, # 2 minutes
         hours_between_tournaments=2,
         force_even_or_odd_hour='odd',
+        replace_url='https://lichess.org/team/darkonteams/tournaments',
+    ),
+    SwissConfig(
+        name="Blitz Shield",
+        path_param="darkonteams",
+        description=BLITZ_SHIELD_DESCRIPTION,
+        clock_limit=180, # 3 minutes
+        clock_increment=0,
+        nb_rounds=13,
+        round_interval=60, # 1 minute
+        hours_between_tournaments=168, # 1 week
         replace_url='https://lichess.org/team/darkonteams/tournaments',
     ),
     ArenaConfig(
