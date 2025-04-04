@@ -9,7 +9,7 @@ import csv
 
 NUM_TOURNAMENTS = 10000
 
-"""This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.csv."""
+"""This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.tsv."""
 
 @dataclass
 class PlayerPerf:
@@ -132,14 +132,20 @@ def get_arena_tournaments(api_key: str) -> None:
         reverse=True
     )
 
-    # Write to CSV
-    with open('points.csv', 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['Username', 'Score', 'Tournaments', 'Games', 'Wins', 'Losses', 'Draws'])
+    with open('points.tsv', 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='\t')
+        writer.writerow(['Username', 'Score', 'Tournaments', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
         for username, perf in sorted_players:
-            writer.writerow([username, perf.score, perf.num_tournaments, perf.games, perf.wins, perf.losses, perf.draws])
+            win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            writer.writerow([
+                username, perf.score, perf.num_tournaments, perf.games, 
+                perf.wins, perf.losses, perf.draws,
+                win_pct, loss_pct, draw_pct
+            ])
 
-    print("Wrote to points.csv")
+    print("Wrote to points.tsv")
 
 
 if __name__ == "__main__":
