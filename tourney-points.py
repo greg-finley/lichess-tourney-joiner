@@ -56,8 +56,7 @@ def get_arena_tournaments(api_key: str) -> None:
     print(f"Found {len(tourney_ids)} tournaments")
 
     for i, tourney_id in enumerate(tourney_ids):
-        if i + 1 % 10 == 0:
-            print(f"Processing tournament {i+1} of {len(tourney_ids)}")
+        print(f"Processing tournament {i+1} of {len(tourney_ids)}")
         url = f"https://lichess.org/api/tournament/{tourney_id}/results?nb=1000"
         response = requests.get(
             url,
