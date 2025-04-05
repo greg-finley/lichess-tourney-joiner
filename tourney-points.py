@@ -11,7 +11,7 @@ from google.auth import default
 # flake8: noqa: E501
 
 NUM_TOURNAMENTS = 1000000
-WRITE_ONLY = True
+WRITE_ONLY = False
 SPREADSHEET_ID = "12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8"
 SHEET_NAME = "points"
 LATEST_TOURNEY_SHEET = "latest tourney processed"  # Sheet name with spaces to match Google Sheets
