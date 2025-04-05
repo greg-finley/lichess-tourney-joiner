@@ -61,6 +61,7 @@ def get_arena_tournaments(api_key: str) -> None:
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {api_key}"},
+            stream=True
         )
         response.raise_for_status()
         for line in response.iter_lines():
@@ -79,6 +80,7 @@ def get_arena_tournaments(api_key: str) -> None:
         games_response = requests.get(
             games_url,
             headers={"Authorization": f"Bearer {api_key}", "Accept": "application/x-ndjson",},
+            stream=True
         )
         games_response.raise_for_status()
         for line in games_response.iter_lines():
