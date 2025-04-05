@@ -5,9 +5,8 @@ from dotenv import load_dotenv
 from dataclasses import dataclass
 import psycopg
 
-# type: ignore
 from googleapiclient.discovery import build  # type: ignore
-from google.oauth2 import service_account  # type: ignore
+from google.auth import default
 
 # flake8: noqa: E501
 
@@ -104,11 +103,8 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str)
         ])
     
     # Load service account credentials
-    # The credentials.json file should be in the same directory as this script
-    creds = service_account.Credentials.from_service_account_file(
-        'credentials.json',
-        scopes=['https://www.googleapis.com/auth/spreadsheets']
-    )
+    # When running in Cloud Functions, use default credentials
+    creds, _ = default()
     
     service = build('sheets', 'v4', credentials=creds)
     sheet = service.spreadsheets()
@@ -140,7 +136,6 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str)
     ).execute()
     
     print(f"Successfully wrote {len(rows)-1} players to Google Sheet")
-    
 
 def get_arena_tournaments() -> None:
     if WRITE_ONLY:
@@ -250,7 +245,7 @@ def get_arena_tournaments() -> None:
     
 
     print(f"Found {len(player_perfs)} players")
-
+ 
     new_latest_tourney_id = tourney_ids[0]
 
     with get_db_connection() as conn:
@@ -260,5 +255,5 @@ def get_arena_tournaments() -> None:
     write_to_sheets(player_perfs, new_latest_tourney_id)
 
 
-if __name__ == "__main__":
+def run(event, context) -> None:
     get_arena_tournaments()
