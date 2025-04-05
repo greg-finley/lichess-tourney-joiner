@@ -16,6 +16,7 @@ class PlayerPerf:
     score: int
     games: int
     num_tournaments: int
+    tournament_wins: int
     wins: int
     losses: int
     draws: int
@@ -28,55 +29,6 @@ def get_api_key() -> str:
     if not api_key:
         raise ValueError("No API key found in environment variables")
     return api_key
-
-def parse_lichess_scoresheet(scoresheet: str) -> tuple[int, int, int, int]:
-    wins = 0
-    losses = 0
-    draws = 0
-    games = 0
-
-    streak = 0  # consecutive wins (2 or more triggers streak)
-
-    for char in scoresheet:
-        score = int(char)
-        games += 1
-        if score == 0:
-            losses += 1
-            streak = 0  # loss breaks streak
-
-        elif score == 1:
-            draws += 1
-            streak = 0  # draw breaks streak
-
-        elif score == 2:
-            if streak >= 2:
-                # we're in a streak, so this must be a draw worth 2 pts
-                draws += 1
-                streak = 0  # draw breaks streak
-            else:
-                # not in streak → win worth 2 pts
-                wins += 1
-                streak += 1
-
-        elif score == 3:
-            # win + berserk, not in streak
-            wins += 1
-            streak += 1
-
-        elif score == 4:
-            # win in streak
-            wins += 1
-            streak += 1
-
-        elif score == 5:
-            # win in streak + berserk
-            wins += 1
-            streak += 1
-
-        else:
-            raise ValueError(f"Unexpected score digit: {score}")
-
-    return wins, losses, draws, games
 
 
 
@@ -91,6 +43,7 @@ def get_arena_tournaments(api_key: str) -> None:
         headers={"Authorization": f"Bearer {api_key}"},
         stream=True
     )
+    response.raise_for_status()
 
     tourney_ids: list[str] = []
     player_perfs: dict[str, PlayerPerf] = {}
@@ -102,26 +55,51 @@ def get_arena_tournaments(api_key: str) -> None:
 
     print(f"Found {len(tourney_ids)} tournaments")
 
-    for tourney_id in tourney_ids:
-        url = f"https://lichess.org/api/tournament/{tourney_id}/results?nb=1000&sheet=true"
+    for i, tourney_id in enumerate(tourney_ids):
+        if i + 1 % 10 == 0:
+            print(f"Processing tournament {i+1} of {len(tourney_ids)}")
+        url = f"https://lichess.org/api/tournament/{tourney_id}/results?nb=1000"
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {api_key}"},
         )
+        response.raise_for_status()
         for line in response.iter_lines():
             if line:
                 # {'rank': 1, 'score': 52, 'rating': 1830, 'username': 'g1my', 'flair': 'people.index-pointing-at-the-viewer-light-skin-tone', 'performance': 2084, 'sheet': {'scores': '5545432053205432'}}
                 result = json.loads(line)
                 username = result['username']
                 if username not in player_perfs:
-                    player_perfs[username] = PlayerPerf(score=0, games=0, num_tournaments=0, wins=0, losses=0, draws=0)
+                    player_perfs[username] = PlayerPerf(score=0, games=0, num_tournaments=0, tournament_wins=0, wins=0, losses=0, draws=0)
                 player_perfs[username].score += result['score']
                 player_perfs[username].num_tournaments += 1
-                wins, losses, draws, games = parse_lichess_scoresheet(result['sheet']['scores'])
-                player_perfs[username].wins += wins
-                player_perfs[username].losses += losses
-                player_perfs[username].draws += draws
-                player_perfs[username].games += games
+                if result['rank'] == 1:
+                    player_perfs[username].tournament_wins += 1
+
+        games_url = f"https://lichess.org/api/tournament/{tourney_id}/games?moves=false&tags=false"
+        games_response = requests.get(
+            games_url,
+            headers={"Authorization": f"Bearer {api_key}", "Accept": "application/x-ndjson",},
+        )
+        games_response.raise_for_status()
+        for line in games_response.iter_lines():
+            if line:
+                game = json.loads(line)
+                white = game['players']['white']['user']['name']
+                black = game['players']['black']['user']['name']
+                player_perfs[white].games += 1
+                player_perfs[black].games += 1
+                winner = game.get('winner')
+                if winner == 'white':
+                    player_perfs[white].wins += 1
+                    player_perfs[black].losses += 1
+                elif winner == 'black':
+                    player_perfs[black].wins += 1
+                    player_perfs[white].losses += 1
+                else:
+                    player_perfs[white].draws += 1
+                    player_perfs[black].draws += 1
+    
 
     print(f"Found {len(player_perfs)} players")
 
@@ -134,13 +112,14 @@ def get_arena_tournaments(api_key: str) -> None:
 
     with open('points.tsv', 'w', newline='') as f:
         writer = csv.writer(f, delimiter='\t')
-        writer.writerow(['Username', 'Score', 'Tournaments', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
+        writer.writerow(['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
         for username, perf in sorted_players:
             win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
             loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
             draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
             writer.writerow([
-                username, perf.score, perf.num_tournaments, perf.games, 
+                username, perf.score, perf.num_tournaments, perf.tournament_wins, tournament_win_pct, perf.games, 
                 perf.wins, perf.losses, perf.draws,
                 win_pct, loss_pct, draw_pct
             ])
