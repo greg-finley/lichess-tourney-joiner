@@ -10,6 +10,7 @@ import psycopg
 # flake8: noqa: E501
 
 NUM_TOURNAMENTS = 100000
+WRITE_ONLY = True
 
 """This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.tsv."""
 
@@ -72,7 +73,38 @@ def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs:
     
     print(f"Updated stats for {len(player_perfs)} players and set latest tournament ID to {latest_tourney_id}")
 
+def write_points_tsv(player_perfs: dict[str, PlayerPerf]) -> None:
+    # Sort players by score in descending order
+    sorted_players = sorted(
+        player_perfs.items(),
+        key=lambda x: x[1].score,
+        reverse=True
+    )
+
+    with open('points.tsv', 'w', newline='') as f:
+        writer = csv.writer(f, delimiter='\t')
+        writer.writerow(['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
+        for username, perf in sorted_players:
+            win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+            tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
+            writer.writerow([
+                username, perf.score, perf.num_tournaments, perf.tournament_wins, tournament_win_pct, perf.games, 
+                perf.wins, perf.losses, perf.draws,
+                win_pct, loss_pct, draw_pct
+            ])
+
+    print("Wrote to points.tsv")
+
 def get_arena_tournaments(api_key: str) -> None:
+    if WRITE_ONLY:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                player_perfs = get_prior_stats(cursor)
+        write_points_tsv(player_perfs)
+        return
+
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             old_latest_tourney_id = get_latest_tourney_id(cursor)
@@ -106,7 +138,7 @@ def get_arena_tournaments(api_key: str) -> None:
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            player_perfs: dict[str, PlayerPerf] = get_prior_stats(cursor)
+            player_perfs = get_prior_stats(cursor)
 
     for i, tourney_id in enumerate(tourney_ids):
         print(f"Processing tournament {i+1} of {len(tourney_ids)}")
@@ -175,28 +207,7 @@ def get_arena_tournaments(api_key: str) -> None:
         with conn.cursor() as cursor:
             update_stats(conn, cursor, player_perfs, tourney_ids[0])
 
-    # Sort players by score in descending order
-    sorted_players = sorted(
-        player_perfs.items(),
-        key=lambda x: x[1].score,
-        reverse=True
-    )
-
-    with open('points.tsv', 'w', newline='') as f:
-        writer = csv.writer(f, delimiter='\t')
-        writer.writerow(['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
-        for username, perf in sorted_players:
-            win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
-            writer.writerow([
-                username, perf.score, perf.num_tournaments, perf.tournament_wins, tournament_win_pct, perf.games, 
-                perf.wins, perf.losses, perf.draws,
-                win_pct, loss_pct, draw_pct
-            ])
-
-    print("Wrote to points.tsv")
+    write_points_tsv(player_perfs)
 
 
 if __name__ == "__main__":
