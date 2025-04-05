@@ -97,13 +97,15 @@ def write_points_tsv(player_perfs: dict[str, PlayerPerf]) -> None:
 
     print("Wrote to points.tsv")
 
-def get_arena_tournaments(api_key: str) -> None:
+def get_arena_tournaments() -> None:
     if WRITE_ONLY:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 player_perfs = get_prior_stats(cursor)
         write_points_tsv(player_perfs)
         return
+    
+    api_key = get_api_key()
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
@@ -211,5 +213,4 @@ def get_arena_tournaments(api_key: str) -> None:
 
 
 if __name__ == "__main__":
-    api_key = get_api_key()
-    get_arena_tournaments(api_key)
+    get_arena_tournaments()
