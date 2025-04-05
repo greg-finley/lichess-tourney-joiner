@@ -75,7 +75,7 @@ def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs:
 def get_arena_tournaments(api_key: str) -> None:
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            latest_tourney_id = get_latest_tourney_id(cursor)
+            old_latest_tourney_id = get_latest_tourney_id(cursor)
     url = (
         "https://lichess.org/api/team/darkonteams/arena"
         f"?max={NUM_TOURNAMENTS}&status=finished&createdBy=gbfgbfgbf"
@@ -94,7 +94,7 @@ def get_arena_tournaments(api_key: str) -> None:
         if line:
             tourney = json.loads(line)
             tourney_id = tourney['id']
-            if tourney_id == latest_tourney_id:
+            if tourney_id == old_latest_tourney_id:
                 break
             tourney_ids.append(tourney_id)
 
@@ -173,7 +173,7 @@ def get_arena_tournaments(api_key: str) -> None:
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            update_stats(conn, cursor, player_perfs, latest_tourney_id)
+            update_stats(conn, cursor, player_perfs, tourney_ids[0])
 
     # Sort players by score in descending order
     sorted_players = sorted(
