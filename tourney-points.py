@@ -9,7 +9,7 @@ import psycopg
 
 # flake8: noqa: E501
 
-NUM_TOURNAMENTS = 100000
+NUM_TOURNAMENTS = 1000000
 WRITE_ONLY = True
 
 """This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.tsv."""
