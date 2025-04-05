@@ -3,16 +3,21 @@ import json
 import os
 from dotenv import load_dotenv
 from dataclasses import dataclass
-import csv
-
 import psycopg
+
+# type: ignore
+from googleapiclient.discovery import build  # type: ignore
+from google.oauth2 import service_account  # type: ignore
 
 # flake8: noqa: E501
 
 NUM_TOURNAMENTS = 1000000
 WRITE_ONLY = True
+SPREADSHEET_ID = "12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8"
+SHEET_NAME = "points"
+LATEST_TOURNEY_SHEET = "latest tourney processed"  # Sheet name with spaces to match Google Sheets
 
-"""This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.tsv."""
+"""This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to Google Sheets."""
 
 @dataclass
 class PlayerPerf:
@@ -73,36 +78,84 @@ def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs:
     
     print(f"Updated stats for {len(player_perfs)} players and set latest tournament ID to {latest_tourney_id}")
 
-def write_points_tsv(player_perfs: dict[str, PlayerPerf]) -> None:
+def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str) -> None:
+    """Write player stats to Google Sheets."""
     # Sort players by score in descending order
     sorted_players = sorted(
         player_perfs.items(),
         key=lambda x: x[1].score,
         reverse=True
     )
-
-    with open('points.tsv', 'w', newline='') as f:
-        writer = csv.writer(f, delimiter='\t')
-        writer.writerow(['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %'])
-        for username, perf in sorted_players:
-            win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
-            tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
-            writer.writerow([
-                username, perf.score, perf.num_tournaments, perf.tournament_wins, tournament_win_pct, perf.games, 
-                perf.wins, perf.losses, perf.draws,
-                win_pct, loss_pct, draw_pct
-            ])
-
-    print("Wrote to points.tsv")
+    
+    # Prepare the data for Google Sheets
+    header = ['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %']
+    rows = [header]
+    
+    for username, perf in sorted_players:
+        win_pct = f"{round((perf.wins / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+        loss_pct = f"{round((perf.losses / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+        draw_pct = f"{round((perf.draws / perf.games) * 100, 2)}%" if perf.games > 0 else "0.00%"
+        tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
+        
+        rows.append([
+            username, str(perf.score), str(perf.num_tournaments), str(perf.tournament_wins), tournament_win_pct, str(perf.games), 
+            str(perf.wins), str(perf.losses), str(perf.draws),
+            win_pct, loss_pct, draw_pct
+        ])
+    
+    # Set up Google Sheets API
+    try:
+        # Load service account credentials
+        # The credentials.json file should be in the same directory as this script
+        creds = service_account.Credentials.from_service_account_file(
+            'credentials.json',
+            scopes=['https://www.googleapis.com/auth/spreadsheets']
+        )
+        
+        service = build('sheets', 'v4', credentials=creds)
+        sheet = service.spreadsheets()
+        
+        # Clear existing data
+        sheet.values().clear(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{SHEET_NAME}!A1:Z1000",
+        ).execute()
+        
+        # Write new data
+        sheet.values().update(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{SHEET_NAME}!A1",
+            valueInputOption="USER_ENTERED",
+            body={"values": rows}
+        ).execute()
+        
+        tourney_url = f"https://lichess.org/tournament/{latest_tourney_id}"
+        sheet.values().clear(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{LATEST_TOURNEY_SHEET}!A1:Z10",
+        ).execute()
+        
+        # Use the HYPERLINK formula to make it clickable
+        hyperlink_formula = f'=HYPERLINK("{tourney_url}", "{tourney_url}")'
+        sheet.values().update(
+            spreadsheetId=SPREADSHEET_ID,
+            range=f"{LATEST_TOURNEY_SHEET}!A1",
+            valueInputOption="USER_ENTERED",
+            body={"values": [[hyperlink_formula]]}
+        ).execute()
+        
+        print(f"Successfully wrote {len(rows)-1} players to Google Sheet")
+    
+    except Exception as e:
+        print(f"Error writing to Google Sheets: {e}")
 
 def get_arena_tournaments() -> None:
     if WRITE_ONLY:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 player_perfs = get_prior_stats(cursor)
-        write_points_tsv(player_perfs)
+                latest_tourney_id = get_latest_tourney_id(cursor)
+        write_to_sheets(player_perfs, latest_tourney_id)
         return
     
     api_key = get_api_key()
@@ -205,11 +258,13 @@ def get_arena_tournaments() -> None:
 
     print(f"Found {len(player_perfs)} players")
 
+    new_latest_tourney_id = tourney_ids[0]
+
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            update_stats(conn, cursor, player_perfs, tourney_ids[0])
+            update_stats(conn, cursor, player_perfs, new_latest_tourney_id)
 
-    write_points_tsv(player_perfs)
+    write_to_sheets(player_perfs, new_latest_tourney_id)
 
 
 if __name__ == "__main__":
