@@ -103,51 +103,44 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str)
             win_pct, loss_pct, draw_pct
         ])
     
-    # Set up Google Sheets API
-    try:
-        # Load service account credentials
-        # The credentials.json file should be in the same directory as this script
-        creds = service_account.Credentials.from_service_account_file(
-            'credentials.json',
-            scopes=['https://www.googleapis.com/auth/spreadsheets']
-        )
-        
-        service = build('sheets', 'v4', credentials=creds)
-        sheet = service.spreadsheets()
-        
-        # Clear existing data
-        sheet.values().clear(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"{SHEET_NAME}!A1:Z1000",
-        ).execute()
-        
-        # Write new data
-        sheet.values().update(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"{SHEET_NAME}!A1",
-            valueInputOption="USER_ENTERED",
-            body={"values": rows}
-        ).execute()
-        
-        tourney_url = f"https://lichess.org/tournament/{latest_tourney_id}"
-        sheet.values().clear(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"{LATEST_TOURNEY_SHEET}!A1:Z10",
-        ).execute()
-        
-        # Use the HYPERLINK formula to make it clickable
-        hyperlink_formula = f'=HYPERLINK("{tourney_url}", "{tourney_url}")'
-        sheet.values().update(
-            spreadsheetId=SPREADSHEET_ID,
-            range=f"{LATEST_TOURNEY_SHEET}!A1",
-            valueInputOption="USER_ENTERED",
-            body={"values": [[hyperlink_formula]]}
-        ).execute()
-        
-        print(f"Successfully wrote {len(rows)-1} players to Google Sheet")
+    # Load service account credentials
+    # The credentials.json file should be in the same directory as this script
+    creds = service_account.Credentials.from_service_account_file(
+        'credentials.json',
+        scopes=['https://www.googleapis.com/auth/spreadsheets']
+    )
     
-    except Exception as e:
-        print(f"Error writing to Google Sheets: {e}")
+    service = build('sheets', 'v4', credentials=creds)
+    sheet = service.spreadsheets()
+    
+    # No longer clear the main sheet - this preserves formatting
+    # Instead, just update the values directly
+    
+    # Write new data
+    sheet.values().update(
+        spreadsheetId=SPREADSHEET_ID,
+        range=f"{SHEET_NAME}!A1",
+        valueInputOption="USER_ENTERED",
+        body={"values": rows}
+    ).execute()
+    
+    tourney_url = f"https://lichess.org/tournament/{latest_tourney_id}"
+    sheet.values().clear(
+        spreadsheetId=SPREADSHEET_ID,
+        range=f"{LATEST_TOURNEY_SHEET}!A1:Z10",
+    ).execute()
+    
+    # Use the HYPERLINK formula to make it clickable
+    hyperlink_formula = f'=HYPERLINK("{tourney_url}", "{tourney_url}")'
+    sheet.values().update(
+        spreadsheetId=SPREADSHEET_ID,
+        range=f"{LATEST_TOURNEY_SHEET}!A1",
+        valueInputOption="USER_ENTERED",
+        body={"values": [[hyperlink_formula]]}
+    ).execute()
+    
+    print(f"Successfully wrote {len(rows)-1} players to Google Sheet")
+    
 
 def get_arena_tournaments() -> None:
     if WRITE_ONLY:
