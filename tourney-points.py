@@ -5,9 +5,11 @@ from dotenv import load_dotenv
 from dataclasses import dataclass
 import csv
 
+import psycopg
+
 # flake8: noqa: E501
 
-NUM_TOURNAMENTS = 10000
+NUM_TOURNAMENTS = 100000
 
 """This script finds all darkonteams Hourly Ultrabullet tournaments and calculates the total points and games for each player, writing to points.tsv."""
 
@@ -30,9 +32,50 @@ def get_api_key() -> str:
         raise ValueError("No API key found in environment variables")
     return api_key
 
+def get_db_connection():
+    conn = psycopg.connect(os.environ["NEON_DATABASE_URL"])
+    return conn
 
+def get_latest_tourney_id(cursor: psycopg.Cursor) -> str:
+    """Get the ID of the latest processed tournament from the database."""
+    cursor.execute("SELECT id FROM latest_tourney LIMIT 1")
+    result = cursor.fetchone()
+    if result is None:
+        raise ValueError("No latest tournament ID found in database")
+    return result[0]
+
+def get_prior_stats(cursor: psycopg.Cursor) -> dict[str, PlayerPerf]:
+    """Get the prior stats for each player from the database."""
+    cursor.execute("SELECT username, score, games, num_tournaments, tournament_wins, wins, losses, draws FROM tourney_stats")
+    result = cursor.fetchall()
+    return {row[0]: PlayerPerf(*row[1:]) for row in result}
+
+def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs: dict[str, PlayerPerf], latest_tourney_id: str) -> None:
+    """
+    Update player statistics and latest tournament ID in a single transaction.
+    Truncates the tourney_stats table and rewrites all stats.
+    """
+    # Truncate the tourney_stats table
+    cursor.execute("TRUNCATE TABLE tourney_stats")
+    
+    # Insert all player stats
+    for username, perf in player_perfs.items():
+        cursor.execute(
+            "INSERT INTO tourney_stats (username, score, games, num_tournaments, tournament_wins, wins, losses, draws) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (username, perf.score, perf.games, perf.num_tournaments, perf.tournament_wins, perf.wins, perf.losses, perf.draws)
+        )
+    
+    # Update the latest tournament ID
+    cursor.execute("UPDATE latest_tourney SET id = %s", (latest_tourney_id,))
+    
+    conn.commit()
+    
+    print(f"Updated stats for {len(player_perfs)} players and set latest tournament ID to {latest_tourney_id}")
 
 def get_arena_tournaments(api_key: str) -> None:
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            latest_tourney_id = get_latest_tourney_id(cursor)
     url = (
         "https://lichess.org/api/team/darkonteams/arena"
         f"?max={NUM_TOURNAMENTS}&status=finished&createdBy=gbfgbfgbf"
@@ -46,14 +89,24 @@ def get_arena_tournaments(api_key: str) -> None:
     response.raise_for_status()
 
     tourney_ids: list[str] = []
-    player_perfs: dict[str, PlayerPerf] = {}
 
     for line in response.iter_lines():
         if line:
             tourney = json.loads(line)
-            tourney_ids.append(tourney['id'])
+            tourney_id = tourney['id']
+            if tourney_id == latest_tourney_id:
+                break
+            tourney_ids.append(tourney_id)
+
+    if not tourney_ids:
+        print("No new tournaments found")
+        return
 
     print(f"Found {len(tourney_ids)} tournaments")
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            player_perfs: dict[str, PlayerPerf] = get_prior_stats(cursor)
 
     for i, tourney_id in enumerate(tourney_ids):
         print(f"Processing tournament {i+1} of {len(tourney_ids)}")
@@ -117,6 +170,10 @@ def get_arena_tournaments(api_key: str) -> None:
     
 
     print(f"Found {len(player_perfs)} players")
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cursor:
+            update_stats(conn, cursor, player_perfs, latest_tourney_id)
 
     # Sort players by score in descending order
     sorted_players = sorted(
