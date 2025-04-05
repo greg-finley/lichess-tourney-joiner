@@ -87,18 +87,32 @@ def get_arena_tournaments(api_key: str) -> None:
                 game = json.loads(line)
                 white = game['players']['white']['user']['name']
                 black = game['players']['black']['user']['name']
-                player_perfs[white].games += 1
-                player_perfs[black].games += 1
+                
+                # Sometimes they don't exist due to players closing their account
+                white_exists = white in player_perfs
+                black_exists = black in player_perfs
+                
                 winner = game.get('winner')
-                if winner == 'white':
-                    player_perfs[white].wins += 1
-                    player_perfs[black].losses += 1
-                elif winner == 'black':
-                    player_perfs[black].wins += 1
-                    player_perfs[white].losses += 1
-                else:
-                    player_perfs[white].draws += 1
-                    player_perfs[black].draws += 1
+                
+                # Update white player stats if they exist
+                if white_exists:
+                    player_perfs[white].games += 1
+                    if winner == 'white':
+                        player_perfs[white].wins += 1
+                    elif winner == 'black' and black_exists:
+                        player_perfs[white].losses += 1
+                    elif winner is None and black_exists:
+                        player_perfs[white].draws += 1
+                
+                # Update black player stats if they exist
+                if black_exists:
+                    player_perfs[black].games += 1
+                    if winner == 'black':
+                        player_perfs[black].wins += 1
+                    elif winner == 'white' and white_exists:
+                        player_perfs[black].losses += 1
+                    elif winner is None and white_exists:
+                        player_perfs[black].draws += 1
     
 
     print(f"Found {len(player_perfs)} players")
