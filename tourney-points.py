@@ -94,24 +94,24 @@ def get_arena_tournaments(api_key: str) -> None:
                 
                 winner = game.get('winner')
                 
-                # Update white player stats if they exist
+                # Process white player if they exist
                 if white_exists:
                     player_perfs[white].games += 1
                     if winner == 'white':
                         player_perfs[white].wins += 1
-                    elif winner == 'black' and black_exists:
+                    elif winner == 'black':
                         player_perfs[white].losses += 1
-                    elif winner is None and black_exists:
+                    elif winner is None:
                         player_perfs[white].draws += 1
                 
-                # Update black player stats if they exist
+                # Process black player if they exist
                 if black_exists:
                     player_perfs[black].games += 1
                     if winner == 'black':
                         player_perfs[black].wins += 1
-                    elif winner == 'white' and white_exists:
+                    elif winner == 'white':
                         player_perfs[black].losses += 1
-                    elif winner is None and white_exists:
+                    elif winner is None:
                         player_perfs[black].draws += 1
     
 
