@@ -1,5 +1,7 @@
 CREATE TABLE IF NOT EXISTS latest_tourney (
-    id TEXT PRIMARY KEY);
+    id TEXT PRIMARY KEY,
+    finishes_at TEXT NOT NULL
+    );
 
 INSERT INTO latest_tourney (id)
 SELECT 'abc' WHERE NOT EXISTS (SELECT 1 FROM latest_tourney);

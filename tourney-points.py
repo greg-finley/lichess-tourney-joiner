@@ -2,6 +2,7 @@ import requests
 import json
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 from dataclasses import dataclass
 import psycopg
 
@@ -28,6 +29,20 @@ class PlayerPerf:
     losses: int
     draws: int
 
+@dataclass
+class Tourney:
+    id: str
+    finishes_at: str
+
+def milliseconds_to_utc_string(ms_timestamp: int) -> str:
+    """Convert a millisecond timestamp to UTC time string in ISO format."""
+    # Convert milliseconds to seconds
+    seconds = ms_timestamp / 1000
+    # Create datetime object in UTC
+    dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
+    # Format as ISO string
+    return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+
 def get_api_key() -> str:
     # Try to load from .env file (local development)
     load_dotenv()
@@ -41,13 +56,13 @@ def get_db_connection():
     conn = psycopg.connect(os.environ["NEON_DATABASE_URL"])
     return conn
 
-def get_latest_tourney_id(cursor: psycopg.Cursor) -> str:
+def get_latest_tourney(cursor: psycopg.Cursor) -> Tourney:
     """Get the ID of the latest processed tournament from the database."""
-    cursor.execute("SELECT id FROM latest_tourney LIMIT 1")
+    cursor.execute("SELECT id, finishes_at FROM latest_tourney LIMIT 1")
     result = cursor.fetchone()
     if result is None:
         raise ValueError("No latest tournament ID found in database")
-    return result[0]
+    return Tourney(id=result[0], finishes_at=result[1])
 
 def get_prior_stats(cursor: psycopg.Cursor) -> dict[str, PlayerPerf]:
     """Get the prior stats for each player from the database."""
@@ -55,7 +70,7 @@ def get_prior_stats(cursor: psycopg.Cursor) -> dict[str, PlayerPerf]:
     result = cursor.fetchall()
     return {row[0]: PlayerPerf(*row[1:]) for row in result}
 
-def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs: dict[str, PlayerPerf], latest_tourney_id: str) -> None:
+def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs: dict[str, PlayerPerf], latest_tourney: Tourney) -> None:
     """
     Update player statistics and latest tournament ID in a single transaction.
     Truncates the tourney_stats table and rewrites all stats.
@@ -74,13 +89,13 @@ def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs:
     )
     
     # Update the latest tournament ID
-    cursor.execute("UPDATE latest_tourney SET id = %s", (latest_tourney_id,))
+    cursor.execute("UPDATE latest_tourney SET id = %s, finishes_at = %s", (latest_tourney.id, latest_tourney.finishes_at))
     
     conn.commit()
     
-    print(f"Updated stats for {len(player_perfs)} players and set latest tournament ID to {latest_tourney_id}")
+    print(f"Updated stats for {len(player_perfs)} players and set latest tournament ID to {latest_tourney.id}")
 
-def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str) -> None:
+def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney: Tourney) -> None:
     """Write player stats to Google Sheets."""
     # Sort players by score in descending order
     sorted_players = sorted(
@@ -123,19 +138,22 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney_id: str)
         body={"values": rows}
     ).execute()
     
-    tourney_url = f"https://lichess.org/tournament/{latest_tourney_id}"
+    tourney_url = f"https://lichess.org/tournament/{latest_tourney.id}"
     sheet.values().clear(
         spreadsheetId=SPREADSHEET_ID,
         range=f"{LATEST_TOURNEY_SHEET}!A1:Z10",
     ).execute()
     
-    # Use the HYPERLINK formula to make it clickable
+    # Use the HYPERLINK formula to make it clickable and include the time
     hyperlink_formula = f'=HYPERLINK("{tourney_url}", "{tourney_url}")'
     sheet.values().update(
         spreadsheetId=SPREADSHEET_ID,
-        range=f"{LATEST_TOURNEY_SHEET}!A1",
+        range=f"{LATEST_TOURNEY_SHEET}!A1:A2",
         valueInputOption="USER_ENTERED",
-        body={"values": [[hyperlink_formula]]}
+        body={"values": [
+            [hyperlink_formula],
+            [f"Tournament ended: {latest_tourney.finishes_at}"]
+        ]}
     ).execute()
     
     print(f"Successfully wrote {len(rows)-1} players to Google Sheet")
@@ -145,15 +163,15 @@ def get_arena_tournaments() -> None:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 player_perfs = get_prior_stats(cursor)
-                latest_tourney_id = get_latest_tourney_id(cursor)
-        write_to_sheets(player_perfs, latest_tourney_id)
+                latest_tourney = get_latest_tourney(cursor)
+        write_to_sheets(player_perfs, latest_tourney)
         return
     
     api_key = get_api_key()
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            old_latest_tourney_id = get_latest_tourney_id(cursor)
+            old_latest_tourney = get_latest_tourney(cursor)
     url = (
         "https://lichess.org/api/team/darkonteams/arena"
         f"?max={NUM_TOURNAMENTS}&status=finished&createdBy=gbfgbfgbf"
@@ -166,29 +184,29 @@ def get_arena_tournaments() -> None:
     )
     response.raise_for_status()
 
-    tourney_ids: list[str] = []
+    tourneys: list[Tourney] = []
 
     for line in response.iter_lines():
         if line:
             tourney = json.loads(line)
-            tourney_id = tourney['id']
-            if tourney_id == old_latest_tourney_id:
+            tourney = tourney['id']
+            if tourney == old_latest_tourney.id:
                 break
-            tourney_ids.append(tourney_id)
+            tourneys.append(Tourney(id=tourney, finishes_at=milliseconds_to_utc_string(tourney['finishesAt'])))
 
-    if not tourney_ids:
+    if not tourneys:
         print("No new tournaments found")
         return
 
-    print(f"Found {len(tourney_ids)} tournaments")
+    print(f"Found {len(tourneys)} tournaments")
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             player_perfs = get_prior_stats(cursor)
 
-    for i, tourney_id in enumerate(tourney_ids):
-        print(f"Processing tournament {i+1} of {len(tourney_ids)}")
-        url = f"https://lichess.org/api/tournament/{tourney_id}/results?nb=1000"
+    for i, tourney in enumerate(tourneys):
+        print(f"Processing tournament {i+1} of {len(tourneys)}")
+        url = f"https://lichess.org/api/tournament/{tourney.id}/results?nb=1000"
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {api_key}"},
@@ -207,7 +225,7 @@ def get_arena_tournaments() -> None:
                 if result['rank'] == 1:
                     player_perfs[username].tournament_wins += 1
 
-        games_url = f"https://lichess.org/api/tournament/{tourney_id}/games?moves=false&tags=false"
+        games_url = f"https://lichess.org/api/tournament/{tourney.id}/games?moves=false&tags=false"
         games_response = requests.get(
             games_url,
             headers={"Authorization": f"Bearer {api_key}", "Accept": "application/x-ndjson",},
@@ -249,13 +267,13 @@ def get_arena_tournaments() -> None:
 
     print(f"Found {len(player_perfs)} players")
  
-    new_latest_tourney_id = tourney_ids[0]
+    new_latest_tourney = tourneys[0]
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
-            update_stats(conn, cursor, player_perfs, new_latest_tourney_id)
+            update_stats(conn, cursor, player_perfs, new_latest_tourney)
 
-    write_to_sheets(player_perfs, new_latest_tourney_id)
+    write_to_sheets(player_perfs, new_latest_tourney)
 
 
 def run(event, context) -> None:
