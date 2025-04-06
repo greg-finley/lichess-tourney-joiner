@@ -74,6 +74,7 @@ Have fun!"""
 ARENA_DESCRIPTION = PROMO + """We host hourly Ultrabullet tournaments! (every 2 hours)
 
 All-time team Ultra standings: [https://docs.google.com/spreadsheets/d/12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8/edit?usp=sharing](https://docs.google.com/spreadsheets/d/12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8/edit?usp=sharing](https://docs.google.com/spreadsheets/d/12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8/edit?usp=sharing)
+
 Next hourly: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
 
 Our Discord server: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)"""
