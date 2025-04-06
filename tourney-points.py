@@ -41,7 +41,7 @@ def milliseconds_to_utc_string(ms_timestamp: int) -> str:
     # Create datetime object in UTC
     dt = datetime.fromtimestamp(seconds, tz=timezone.utc)
     # Format as ISO string
-    return dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return dt.strftime('%Y-%m-%dT%H:%M:%SZ').replace('Z', ' UTC')
 
 def get_api_key() -> str:
     # Try to load from .env file (local development)
