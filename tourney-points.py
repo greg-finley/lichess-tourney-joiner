@@ -148,11 +148,10 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney: Tourney
     hyperlink_formula = f'=HYPERLINK("{tourney_url}", "{tourney_url}")'
     sheet.values().update(
         spreadsheetId=SPREADSHEET_ID,
-        range=f"{LATEST_TOURNEY_SHEET}!A1:A2",
+        range=f"{LATEST_TOURNEY_SHEET}!A1:B1",
         valueInputOption="USER_ENTERED",
         body={"values": [
-            [hyperlink_formula],
-            [f"Tournament ended: {latest_tourney.finishes_at}"]
+            [hyperlink_formula, f"Tournament ended: {latest_tourney.finishes_at}"]
         ]}
     ).execute()
     
