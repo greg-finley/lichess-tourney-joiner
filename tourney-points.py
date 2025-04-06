@@ -188,11 +188,11 @@ def get_arena_tournaments() -> None:
 
     for line in response.iter_lines():
         if line:
-            tourney = json.loads(line)
-            tourney = tourney['id']
-            if tourney == old_latest_tourney.id:
+            tourney_data = json.loads(line)
+            tourney_id = tourney_data['id']
+            if tourney_id == old_latest_tourney.id:
                 break
-            tourneys.append(Tourney(id=tourney, finishes_at=milliseconds_to_utc_string(tourney['finishesAt'])))
+            tourneys.append(Tourney(id=tourney_id, finishes_at=milliseconds_to_utc_string(tourney_data['finishesAt'])))
 
     if not tourneys:
         print("No new tournaments found")
