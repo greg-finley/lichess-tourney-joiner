@@ -81,12 +81,12 @@ def update_stats(conn: psycopg.Connection, cursor: psycopg.Cursor, player_perfs:
     cursor.execute("TRUNCATE TABLE tourney_stats")
     
     # Batch insert all player stats
-    player_data = [(username, perf.score, perf.games, perf.num_tournaments, 
+    player_data = [(username, perf.score, perf.highest_tourney_score, perf.highest_tourney_url, perf.games, perf.num_tournaments, 
                     perf.tournament_wins, perf.wins, perf.losses, perf.draws) 
                    for username, perf in player_perfs.items()]
 
     cursor.executemany(
-        "INSERT INTO tourney_stats (username, score, games, num_tournaments, tournament_wins, wins, losses, draws) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+        "INSERT INTO tourney_stats (username, score, highest_tourney_score, highest_tourney_url, games, num_tournaments, tournament_wins, wins, losses, draws) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
         player_data
     )
     
