@@ -22,6 +22,8 @@ LATEST_TOURNEY_SHEET = "latest tourney processed"  # Sheet name with spaces to m
 @dataclass
 class PlayerPerf:
     score: int
+    highest_tourney_score: int
+    highest_tourney_url: str
     games: int
     num_tournaments: int
     tournament_wins: int
@@ -66,7 +68,7 @@ def get_latest_tourney(cursor: psycopg.Cursor) -> Tourney:
 
 def get_prior_stats(cursor: psycopg.Cursor) -> dict[str, PlayerPerf]:
     """Get the prior stats for each player from the database."""
-    cursor.execute("SELECT username, score, games, num_tournaments, tournament_wins, wins, losses, draws FROM tourney_stats")
+    cursor.execute("SELECT username, score, highest_tourney_score, highest_tourney_url, games, num_tournaments, tournament_wins, wins, losses, draws FROM tourney_stats")
     result = cursor.fetchall()
     return {row[0]: PlayerPerf(*row[1:]) for row in result}
 
@@ -105,7 +107,7 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney: Tourney
     )
     
     # Prepare the data for Google Sheets
-    header = ['Username', 'Score', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %']
+    header = ['Username', 'Score', 'Highest Tourney Score', 'Highest Tourney Score URL', 'Tournaments', 'Tournament Wins', 'Tournament Win %', 'Games', 'Wins', 'Losses', 'Draws', 'Win %', 'Loss %', 'Draw %']
     rows = [header]
     
     for username, perf in sorted_players:
@@ -115,7 +117,8 @@ def write_to_sheets(player_perfs: dict[str, PlayerPerf], latest_tourney: Tourney
         tournament_win_pct = f"{round((perf.tournament_wins / perf.num_tournaments) * 100, 2)}%" if perf.num_tournaments > 0 else "0.00%"
         
         rows.append([
-            username, str(perf.score), str(perf.num_tournaments), str(perf.tournament_wins), tournament_win_pct, str(perf.games), 
+            username, str(perf.score), str(perf.highest_tourney_score), str(perf.highest_tourney_url),
+            str(perf.num_tournaments), str(perf.tournament_wins), tournament_win_pct, str(perf.games), 
             str(perf.wins), str(perf.losses), str(perf.draws),
             win_pct, loss_pct, draw_pct
         ])
@@ -218,11 +221,14 @@ def get_arena_tournaments() -> None:
                 result = json.loads(line)
                 username = result['username']
                 if username not in player_perfs:
-                    player_perfs[username] = PlayerPerf(score=0, games=0, num_tournaments=0, tournament_wins=0, wins=0, losses=0, draws=0)
+                    player_perfs[username] = PlayerPerf(score=0, highest_tourney_score=0, highest_tourney_url="", games=0, num_tournaments=0, tournament_wins=0, wins=0, losses=0, draws=0)
                 player_perfs[username].score += result['score']
                 player_perfs[username].num_tournaments += 1
                 if result['rank'] == 1:
                     player_perfs[username].tournament_wins += 1
+                if result['score'] > player_perfs[username].highest_tourney_score:
+                    player_perfs[username].highest_tourney_score = result['score']
+                    player_perfs[username].highest_tourney_url = f"https://lichess.org/tournament/{tourney.id}"
 
         games_url = f"https://lichess.org/api/tournament/{tourney.id}/games?moves=false&tags=false"
         games_response = requests.get(

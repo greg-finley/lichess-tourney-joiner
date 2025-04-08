@@ -9,6 +9,8 @@ SELECT 'abc' WHERE NOT EXISTS (SELECT 1 FROM latest_tourney);
 CREATE TABLE IF NOT EXISTS tourney_stats (
     username TEXT PRIMARY KEY,
     score INTEGER NOT NULL,
+    highest_tourney_score INTEGER NOT NULL,
+    highest_tourney_url TEXT NOT NULL,
     games INTEGER NOT NULL,
     num_tournaments INTEGER NOT NULL,
     tournament_wins INTEGER NOT NULL,
