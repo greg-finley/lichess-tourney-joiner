@@ -42,6 +42,8 @@ PROMO = """5€ MONEY PRIZE SWISS: (Open for all) (20.04.2025) [https://lichess.
 
 10€ MONEY PRIZE ARENA: (Only for discord members) (04.05.2025) [https://lichess.org/tournament/fm41tzRh](https://lichess.org/tournament/fm41tzRh)
 
+$50 MONEY CRAZYHOUSE ARENA: (Open for all) (12.05.2025) [https://lichess.org/tournament/qJQ23jBP](https://lichess.org/tournament/qJQ23jBP)
+
 """
 
 
