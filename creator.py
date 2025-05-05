@@ -38,9 +38,10 @@ class SwissConfig(TournamentConfig):
     nb_rounds: int = 9
     round_interval: int = 60
 
-PROMO = """10€ MONEY PRIZE ARENA: (Only for discord members) (04.05.2025) [https://lichess.org/tournament/fm41tzRh](https://lichess.org/tournament/fm41tzRh)
-
+PROMO = """
 $50 MONEY CRAZYHOUSE ARENA: (Open for all) (12.05.2025) [https://lichess.org/tournament/qJQ23jBP](https://lichess.org/tournament/qJQ23jBP)
+
+BLITZ MONEY PRIZE (17.05.2025) [https://lichess.org/swiss/k5MANK2J](https://lichess.org/swiss/k5MANK2J)
 
 """
 
