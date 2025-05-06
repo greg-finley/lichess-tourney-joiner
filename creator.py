@@ -39,7 +39,7 @@ class SwissConfig(TournamentConfig):
     round_interval: int = 60
 
 PROMO = """
-$50 MONEY CRAZYHOUSE ARENA: (Open for all) (12.05.2025) [https://lichess.org/tournament/qJQ23jBP](https://lichess.org/tournament/qJQ23jBP)
+$50 MONEY CRAZYHOUSE ARENA: (Open for all) (13.05.2025) [https://lichess.org/tournament/qJQ23jBP](https://lichess.org/tournament/qJQ23jBP)
 
 BLITZ MONEY PRIZE (17.05.2025) [https://lichess.org/swiss/k5MANK2J](https://lichess.org/swiss/k5MANK2J)
 
