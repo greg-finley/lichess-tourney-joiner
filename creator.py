@@ -41,6 +41,8 @@ class SwissConfig(TournamentConfig):
 PROMO = """
 BLITZ MONEY PRIZE (17.05.2025) [https://lichess.org/swiss/k5MANK2J](https://lichess.org/swiss/k5MANK2J)
 
+30USD BOT AND HUMANS MARATHON Arena (25.05.2025) [https://lichess.org/tournament/877mkEpC](https://lichess.org/tournament/877mkEpC)
+
 """
 
 
