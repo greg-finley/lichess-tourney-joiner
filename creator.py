@@ -41,7 +41,7 @@ class SwissConfig(TournamentConfig):
 PROMO = """
 30USD BOT AND HUMANS MARATHON Arena (25.05.2025) [https://lichess.org/tournament/877mkEpC](https://lichess.org/tournament/877mkEpC)
 
-10EURO RAPID PRIZE SWISS (01.06.2025) [https://lichess.org/swiss/yzGNfHOg](https://lichess.org/swiss/yzGNfHOg)
+10EUR O RAPID PRIZE SWISS (01.06.2025) [https://lichess.org/swiss/yzGNfHOg](https://lichess.org/swiss/yzGNfHOg)
 
 """
 
