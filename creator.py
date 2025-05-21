@@ -39,9 +39,9 @@ class SwissConfig(TournamentConfig):
     round_interval: int = 60
 
 PROMO = """
-BLITZ MONEY PRIZE (17.05.2025) [https://lichess.org/swiss/k5MANK2J](https://lichess.org/swiss/k5MANK2J)
-
 30USD BOT AND HUMANS MARATHON Arena (25.05.2025) [https://lichess.org/tournament/877mkEpC](https://lichess.org/tournament/877mkEpC)
+
+10EURO RAPID PRIZE SWISS (01.06.2025) [https://lichess.org/swiss/yzGNfHOg](https://lichess.org/swiss/yzGNfHOg)
 
 """
 
