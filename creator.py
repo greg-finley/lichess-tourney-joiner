@@ -38,10 +38,7 @@ class SwissConfig(TournamentConfig):
     nb_rounds: int = 9
     round_interval: int = 60
 
-PROMO = requests.get(
-    "https://rentry.co/nnt3nqhc/raw", 
-    headers={"rentry-auth": "dummy-access-code"}
-).text
+PROMO = requests.get("https://rentry.co/nnt3nqhc/raw").text
 
 
 CLASSICAL_DESCRIPTION = PROMO + """
