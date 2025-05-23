@@ -38,15 +38,15 @@ class SwissConfig(TournamentConfig):
     nb_rounds: int = 9
     round_interval: int = 60
 
-PROMO = """
-30USD BOT AND HUMANS MARATHON Arena (25.05.2025) [https://lichess.org/tournament/877mkEpC](https://lichess.org/tournament/877mkEpC)
-
-10EURO RAPID PRIZE SWISS (01.06.2025) [https://lichess.org/swiss/yzGNfHOg](https://lichess.org/swiss/yzGNfHOg)
-
-"""
+PROMO = requests.get(
+    "https://rentry.co/nnt3nqhc/raw", 
+    headers={"rentry-auth": "dummy-access-code"}
+).text
 
 
-CLASSICAL_DESCRIPTION = PROMO + """This team offers classical (30+0) swiss tournaments every 4 hours.
+CLASSICAL_DESCRIPTION = PROMO + """
+
+This team offers classical (30+0) swiss tournaments every 4 hours.
 
 Next swiss: [https://lichess.org/team/darkonclassical/tournaments](https://lichess.org/team/darkonclassical/tournaments)
 
@@ -54,7 +54,9 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Rapid team: [lichess.org/team/darkonrapid](https://lichess.org/team/darkonrapid)"""
 
-RAPID_DESCRIPTION = PROMO + """This team offers Rapid swiss tournaments every 4 hours.
+RAPID_DESCRIPTION = PROMO + """
+
+This team offers Rapid swiss tournaments every 4 hours.
 
 Next swiss: [https://lichess.org/team/darkonrapid/tournaments](https://lichess.org/team/darkonrapid/tournaments)
 
@@ -62,7 +64,9 @@ Discord: [discord.gg/cNS3u7Gnbn](https://discord.gg/cNS3u7Gnbn)
 Main team: [lichess.org/team/darkonteams](https://lichess.org/team/darkonteams)
 Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/darkonclassical)"""
 
-MAIN_DESCRIPTION = PROMO + """This team offers swiss tournaments EVERY HOUR!
+MAIN_DESCRIPTION = PROMO + """
+
+This team offers swiss tournaments EVERY HOUR!
 
 Next swiss: [https://lichess.org/team/darkonteams/tournaments](https://lichess.org/team/darkonteams/tournaments)
 
@@ -72,7 +76,9 @@ Classical team: [lichess.org/team/darkonclassical](https://lichess.org/team/dark
 
 Have fun!"""
 
-ARENA_DESCRIPTION = PROMO + """We host hourly Ultrabullet tournaments! (every 2 hours)
+ARENA_DESCRIPTION = PROMO + """
+
+We host hourly Ultrabullet tournaments! (every 2 hours)
 
 HOURLY ULTRABULLET ALL-TIME RANKING: [View Ranking Here](https://docs.google.com/spreadsheets/d/12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8/edit?usp=sharing](https://docs.google.com/spreadsheets/d/12aZszJiwVvh5RBggnbpuy4ePliJ9aJS9cCX-7UJgcX8/edit?usp=sharing)
 
